@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>ค้นหาสูตรเครื่องดื่ม</title>
+
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f7f7f7;
+      color: #222;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      padding: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 40px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .status {
+      margin-top: 30px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #f0f0f0;
+    }
+
+    .success {
+      background: #e8f5e9;
+    }
+
+    .error {
+      background: #ffebee;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <div class="card">
+
+      <h1>ระบบค้นหาสูตรเครื่องดื่ม</h1>
+
+      <p>LIFF Version</p>
+
+      <div
+        id="status"
+        class="status"
+      >
+        กำลังเชื่อมต่อกับ LINE...
+      </div>
+
+    </div>
+  </div>
+
+
+  <script>
+
+    const LIFF_ID = '2010750055-ukl2mGbL';
+
+
+    async function initializeLiff() {
+
+      const statusElement =
+        document.getElementById('status');
+
+      try {
+
+        statusElement.innerHTML =
+          '1. เริ่มโหลด LIFF SDK...';
+
+
+        if (typeof liff === 'undefined') {
+
+          throw new Error(
+            'LIFF SDK โหลดไม่สำเร็จ'
+          );
+
+        }
+
+
+        statusElement.innerHTML =
+          '2. พบ LIFF SDK แล้ว กำลัง init...';
+
+
+        await liff.init({
+          liffId: LIFF_ID
+        });
+
+
+        statusElement.innerHTML =
+          '3. LIFF init สำเร็จ<br>' +
+          'isInClient: ' +
+          liff.isInClient() +
+          '<br>' +
+          'isLoggedIn: ' +
+          liff.isLoggedIn();
+
+
+        if (!liff.isLoggedIn()) {
+
+          statusElement.innerHTML +=
+            '<br><br>กำลังเข้าสู่ระบบ LINE...';
+
+          liff.login();
+
+          return;
+
+        }
+
+
+        statusElement.innerHTML =
+          '4. Login แล้ว กำลังอ่านโปรไฟล์...';
+
+
+        const profile =
+          await liff.getProfile();
+
+
+        statusElement.classList.add(
+          'success'
+        );
+
+
+        statusElement.innerHTML =
+          'เชื่อมต่อ LINE สำเร็จ<br><br>' +
+          'ชื่อผู้ใช้: ' +
+          profile.displayName +
+          '<br><br>' +
+          'User ID: ' +
+          profile.userId;
+
+      } catch (error) {
+
+        console.error(error);
+
+
+        statusElement.classList.add(
+          'error'
+        );
+
+
+        statusElement.innerHTML =
+          'เกิดข้อผิดพลาด<br><br>' +
+          'ชื่อ: ' +
+          (error.name || '-') +
+          '<br>' +
+          'ข้อความ: ' +
+          (error.message || error);
+
+      }
+
+    }
+
+
+    window.addEventListener(
+      'load',
+      initializeLiff
+    );
+
+  </script>
+
+</body>
+</html>
