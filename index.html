@@ -35,6 +35,15 @@
       text-align: center;
     }
 
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #666;
+    }
+
     .status {
       margin-top: 30px;
       padding: 14px;
@@ -49,17 +58,65 @@
     .error {
       background: #ffebee;
     }
+
+    .hidden {
+      display: none;
+    }
+
+    .form-group {
+      margin-top: 24px;
+      text-align: left;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 14px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 18px;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: #06c755;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 
 <body>
 
   <div class="container">
+
     <div class="card">
 
       <h1>ระบบค้นหาสูตรเครื่องดื่ม</h1>
 
       <p>LIFF Version</p>
+
+
+      <!-- ============================= -->
+      <!-- สถานะระบบ -->
+      <!-- ============================= -->
 
       <div
         id="status"
@@ -68,23 +125,82 @@
         กำลังเชื่อมต่อกับ LINE...
       </div>
 
+
+      <!-- ============================= -->
+      <!-- หน้าลงทะเบียน -->
+      <!-- ============================= -->
+
+      <div
+        id="registerSection"
+        class="hidden"
+      >
+
+        <div class="form-group">
+
+          <label for="employeeId">
+            รหัสพนักงาน
+          </label>
+
+          <input
+            type="text"
+            id="employeeId"
+            placeholder="กรอกรหัสพนักงาน"
+            inputmode="numeric"
+          >
+
+        </div>
+
+        <button
+          id="registerButton"
+          onclick="registerUser()"
+        >
+          ลงทะเบียน
+        </button>
+
+      </div>
+
     </div>
+
   </div>
 
 
 <script>
-  const LIFF_ID = '2010750055-ukl2mGbL';
+
+  // ===================================================
+  // ตั้งค่า LIFF
+  // ===================================================
+
+  const LIFF_ID =
+    '2010750055-ukl2mGbL';
+
+
+  // ===================================================
+  // ใส่ Apps Script Web App URL /exec
+  // ===================================================
 
   const API_URL =
     'https://script.google.com/macros/s/AKfycbzqJwPDxPBDX3ARXPowoUOIZfdtm4qgVC6EzO6AMg67qI8HjSWS8QXeKcQ45XYmTcFd/exec';
 
 
+  let currentIdToken =
+    null;
+
+
+  // ===================================================
+  // เริ่มต้นระบบ
+  // ===================================================
+
   async function initializeLiff() {
 
     const statusElement =
-      document.getElementById('status');
+      document.getElementById(
+        'status'
+      );
 
     try {
+
+      statusElement.className =
+        'status';
 
       statusElement.innerHTML =
         'กำลังเชื่อมต่อกับ LINE...';
@@ -104,15 +220,12 @@
       }
 
 
-      // ==============================================
-      // รับ ID Token จาก LINE
-      // ==============================================
-
-      const idToken =
+      // รับ ID Token
+      currentIdToken =
         liff.getIDToken();
 
 
-      if (!idToken) {
+      if (!currentIdToken) {
 
         throw new Error(
           'ไม่สามารถรับข้อมูลยืนยันตัวตนจาก LINE ได้'
@@ -125,49 +238,19 @@
         'กำลังตรวจสอบสิทธิ์ผู้ใช้งาน...';
 
 
-      // ==============================================
-      // ส่ง Token ไปตรวจที่ Apps Script
-      // ==============================================
-
-      const response =
-        await fetch(
-          API_URL,
-          {
-            method: 'POST',
-
-            headers: {
-              'Content-Type':
-                'text/plain;charset=utf-8'
-            },
-
-            body: JSON.stringify({
-              source: 'LIFF',
-              action: 'checkUser',
-              idToken: idToken
-            })
-          }
-        );
-
-
-      if (!response.ok) {
-
-        throw new Error(
-          'ไม่สามารถเชื่อมต่อระบบตรวจสอบผู้ใช้ได้'
-        );
-
-      }
-
-
+      // ตรวจผู้ใช้กับ Backend
       const result =
-        await response.json();
+        await callApi({
+          source:
+            'LIFF',
 
+          action:
+            'checkUser',
 
-      console.log(result);
+          idToken:
+            currentIdToken
+        });
 
-
-      // ==============================================
-      // ระบบเกิดข้อผิดพลาด
-      // ==============================================
 
       if (!result.success) {
 
@@ -179,30 +262,38 @@
       }
 
 
-      // ==============================================
+      // ===============================================
       // ยังไม่ลงทะเบียน
-      // ==============================================
+      // ===============================================
 
       if (!result.registered) {
 
         statusElement.innerHTML =
           'ยังไม่พบการลงทะเบียนของบัญชีนี้<br><br>' +
-          'ขั้นตอนถัดไปจะแสดงหน้ากรอกรหัสพนักงาน';
+          'กรุณากรอกรหัสพนักงานเพื่อเปิดใช้งาน';
+
+        document
+          .getElementById(
+            'registerSection'
+          )
+          .classList
+          .remove(
+            'hidden'
+          );
 
         return;
 
       }
 
 
-      // ==============================================
+      // ===============================================
       // บัญชีถูกระงับ
-      // ==============================================
+      // ===============================================
 
       if (result.blocked) {
 
-        statusElement.classList.add(
-          'error'
-        );
+        statusElement.className =
+          'status error';
 
         statusElement.innerHTML =
           'บัญชีของคุณถูกระงับการใช้งาน<br><br>' +
@@ -213,17 +304,150 @@
       }
 
 
-      // ==============================================
-      // ผู้ใช้ลงทะเบียนแล้ว
-      // ==============================================
+      // ===============================================
+      // ลงทะเบียนแล้ว
+      // ===============================================
 
-      statusElement.classList.add(
-        'success'
+      showRegisteredUser(
+        result
       );
 
 
+    } catch (error) {
+
+      console.error(
+        error
+      );
+
+      statusElement.className =
+        'status error';
+
       statusElement.innerHTML =
-        'ตรวจสอบผู้ใช้สำเร็จ<br><br>' +
+        'เกิดข้อผิดพลาด<br><br>' +
+        error.message;
+
+    }
+
+  }
+
+
+
+  // ===================================================
+  // ลงทะเบียนผู้ใช้ใหม่
+  // ===================================================
+
+  async function registerUser() {
+
+    const employeeIdInput =
+      document.getElementById(
+        'employeeId'
+      );
+
+    const registerButton =
+      document.getElementById(
+        'registerButton'
+      );
+
+    const statusElement =
+      document.getElementById(
+        'status'
+      );
+
+
+    const employeeId =
+      employeeIdInput
+        .value
+        .trim();
+
+
+    if (!employeeId) {
+
+      statusElement.className =
+        'status error';
+
+      statusElement.innerHTML =
+        'กรุณากรอกรหัสพนักงาน';
+
+      return;
+
+    }
+
+
+    if (
+      !/^\d{6,15}$/.test(
+        employeeId
+      )
+    ) {
+
+      statusElement.className =
+        'status error';
+
+      statusElement.innerHTML =
+        'รูปแบบรหัสพนักงานไม่ถูกต้อง';
+
+      return;
+
+    }
+
+
+    try {
+
+      registerButton.disabled =
+        true;
+
+      registerButton.innerHTML =
+        'กำลังลงทะเบียน...';
+
+
+      statusElement.className =
+        'status';
+
+      statusElement.innerHTML =
+        'กำลังตรวจสอบรหัสพนักงาน...';
+
+
+      const result =
+        await callApi({
+          source:
+            'LIFF',
+
+          action:
+            'register',
+
+          idToken:
+            currentIdToken,
+
+          employeeId:
+            employeeId
+        });
+
+
+      if (!result.success) {
+
+        throw new Error(
+          result.message ||
+          'ลงทะเบียนไม่สำเร็จ'
+        );
+
+      }
+
+
+      // ซ่อนฟอร์มลงทะเบียน
+      document
+        .getElementById(
+          'registerSection'
+        )
+        .classList
+        .add(
+          'hidden'
+        );
+
+
+      statusElement.className =
+        'status success';
+
+      statusElement.innerHTML =
+        'ลงทะเบียนสำเร็จ<br><br>' +
         'ชื่อ: ' +
         result.name +
         '<br>' +
@@ -235,27 +459,115 @@
 
     } catch (error) {
 
-      console.error(error);
-
-
-      statusElement.classList.add(
-        'error'
+      console.error(
+        error
       );
 
 
+      statusElement.className =
+        'status error';
+
       statusElement.innerHTML =
-        'เกิดข้อผิดพลาด<br><br>' +
+        'ลงทะเบียนไม่สำเร็จ<br><br>' +
         error.message;
+
+
+      registerButton.disabled =
+        false;
+
+      registerButton.innerHTML =
+        'ลงทะเบียน';
 
     }
 
   }
 
 
+
+  // ===================================================
+  // แสดงข้อมูลผู้ใช้ที่ลงทะเบียนแล้ว
+  // ===================================================
+
+  function showRegisteredUser(
+    result
+  ) {
+
+    const statusElement =
+      document.getElementById(
+        'status'
+      );
+
+
+    statusElement.className =
+      'status success';
+
+
+    statusElement.innerHTML =
+      'ตรวจสอบผู้ใช้สำเร็จ<br><br>' +
+      'ชื่อ: ' +
+      result.name +
+      '<br>' +
+      'รหัสพนักงาน: ' +
+      result.employeeId +
+      '<br><br>' +
+      'พร้อมเข้าสู่หน้าค้นหาสูตร';
+
+  }
+
+
+
+  // ===================================================
+  // เรียก Apps Script API
+  // ===================================================
+
+  async function callApi(
+    payload
+  ) {
+
+    const response =
+      await fetch(
+        API_URL,
+        {
+          method:
+            'POST',
+
+          headers: {
+            'Content-Type':
+              'text/plain;charset=utf-8'
+          },
+
+          body:
+            JSON.stringify(
+              payload
+            )
+        }
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        'ไม่สามารถเชื่อมต่อระบบได้'
+      );
+
+    }
+
+
+    return await response.json();
+
+  }
+
+
+
+  // ===================================================
+  // เริ่มทำงานเมื่อหน้าโหลด
+  // ===================================================
+
   window.addEventListener(
     'load',
     initializeLiff
   );
+
 </script>
 
 </body>
