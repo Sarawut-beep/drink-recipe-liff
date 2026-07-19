@@ -72,111 +72,191 @@
   </div>
 
 
-  <script>
+<script>
+  const LIFF_ID = '2010750055-ukl2mGbL';
 
-    const LIFF_ID = '2010750055-ukl2mGbL';
-
-
-    async function initializeLiff() {
-
-      const statusElement =
-        document.getElementById('status');
-
-      try {
-
-        statusElement.innerHTML =
-          '1. เริ่มโหลด LIFF SDK...';
+  const API_URL =
+    'https://script.google.com/macros/s/AKfycbzqJwPDxPBDX3ARXPowoUOIZfdtm4qgVC6EzO6AMg67qI8HjSWS8QXeKcQ45XYmTcFd/exec';
 
 
-        if (typeof liff === 'undefined') {
+  async function initializeLiff() {
 
-          throw new Error(
-            'LIFF SDK โหลดไม่สำเร็จ'
-          );
+    const statusElement =
+      document.getElementById('status');
 
-        }
+    try {
 
-
-        statusElement.innerHTML =
-          '2. พบ LIFF SDK แล้ว กำลัง init...';
+      statusElement.innerHTML =
+        'กำลังเชื่อมต่อกับ LINE...';
 
 
-        await liff.init({
-          liffId: LIFF_ID
-        });
+      await liff.init({
+        liffId: LIFF_ID
+      });
 
 
-        statusElement.innerHTML =
-          '3. LIFF init สำเร็จ<br>' +
-          'isInClient: ' +
-          liff.isInClient() +
-          '<br>' +
-          'isLoggedIn: ' +
-          liff.isLoggedIn();
+      if (!liff.isLoggedIn()) {
+
+        liff.login();
+
+        return;
+
+      }
 
 
-        if (!liff.isLoggedIn()) {
+      // ==============================================
+      // รับ ID Token จาก LINE
+      // ==============================================
 
-          statusElement.innerHTML +=
-            '<br><br>กำลังเข้าสู่ระบบ LINE...';
-
-          liff.login();
-
-          return;
-
-        }
+      const idToken =
+        liff.getIDToken();
 
 
-        statusElement.innerHTML =
-          '4. Login แล้ว กำลังอ่านโปรไฟล์...';
+      if (!idToken) {
+
+        throw new Error(
+          'ไม่สามารถรับข้อมูลยืนยันตัวตนจาก LINE ได้'
+        );
+
+      }
 
 
-        const profile =
-          await liff.getProfile();
+      statusElement.innerHTML =
+        'กำลังตรวจสอบสิทธิ์ผู้ใช้งาน...';
 
 
-        statusElement.classList.add(
-          'success'
+      // ==============================================
+      // ส่ง Token ไปตรวจที่ Apps Script
+      // ==============================================
+
+      const response =
+        await fetch(
+          API_URL,
+          {
+            method: 'POST',
+
+            headers: {
+              'Content-Type':
+                'text/plain;charset=utf-8'
+            },
+
+            body: JSON.stringify({
+              source: 'LIFF',
+              action: 'checkUser',
+              idToken: idToken
+            })
+          }
         );
 
 
+      if (!response.ok) {
+
+        throw new Error(
+          'ไม่สามารถเชื่อมต่อระบบตรวจสอบผู้ใช้ได้'
+        );
+
+      }
+
+
+      const result =
+        await response.json();
+
+
+      console.log(result);
+
+
+      // ==============================================
+      // ระบบเกิดข้อผิดพลาด
+      // ==============================================
+
+      if (!result.success) {
+
+        throw new Error(
+          result.message ||
+          'ไม่สามารถตรวจสอบผู้ใช้ได้'
+        );
+
+      }
+
+
+      // ==============================================
+      // ยังไม่ลงทะเบียน
+      // ==============================================
+
+      if (!result.registered) {
+
         statusElement.innerHTML =
-          'เชื่อมต่อ LINE สำเร็จ<br><br>' +
-          'ชื่อผู้ใช้: ' +
-          profile.displayName +
-          '<br><br>' +
-          'User ID: ' +
-          profile.userId;
+          'ยังไม่พบการลงทะเบียนของบัญชีนี้<br><br>' +
+          'ขั้นตอนถัดไปจะแสดงหน้ากรอกรหัสพนักงาน';
 
-      } catch (error) {
+        return;
 
-        console.error(error);
+      }
 
+
+      // ==============================================
+      // บัญชีถูกระงับ
+      // ==============================================
+
+      if (result.blocked) {
 
         statusElement.classList.add(
           'error'
         );
 
-
         statusElement.innerHTML =
-          'เกิดข้อผิดพลาด<br><br>' +
-          'ชื่อ: ' +
-          (error.name || '-') +
-          '<br>' +
-          'ข้อความ: ' +
-          (error.message || error);
+          'บัญชีของคุณถูกระงับการใช้งาน<br><br>' +
+          'กรุณาติดต่อผู้ดูแลระบบ';
+
+        return;
 
       }
 
+
+      // ==============================================
+      // ผู้ใช้ลงทะเบียนแล้ว
+      // ==============================================
+
+      statusElement.classList.add(
+        'success'
+      );
+
+
+      statusElement.innerHTML =
+        'ตรวจสอบผู้ใช้สำเร็จ<br><br>' +
+        'ชื่อ: ' +
+        result.name +
+        '<br>' +
+        'รหัสพนักงาน: ' +
+        result.employeeId +
+        '<br><br>' +
+        'พร้อมเข้าสู่หน้าค้นหาสูตร';
+
+
+    } catch (error) {
+
+      console.error(error);
+
+
+      statusElement.classList.add(
+        'error'
+      );
+
+
+      statusElement.innerHTML =
+        'เกิดข้อผิดพลาด<br><br>' +
+        error.message;
+
     }
 
+  }
 
-    window.addEventListener(
-      'load',
-      initializeLiff
-    );
 
-  </script>
+  window.addEventListener(
+    'load',
+    initializeLiff
+  );
+</script>
 
 </body>
 </html>
