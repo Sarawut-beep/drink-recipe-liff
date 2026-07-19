@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
   <meta charset="UTF-8">
 
@@ -8,36 +8,47 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>ค้นหาสูตรเครื่องดื่ม</title>
+  <title>ระบบค้นหาสูตรเครื่องดื่ม</title>
 
+  <!-- LINE LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
-      background: #f7f7f7;
+      font-family: Arial, sans-serif;
+      background: #f5f6f7;
       color: #222;
     }
 
     .container {
-      max-width: 500px;
-      margin: auto;
-      padding: 24px;
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 20px;
     }
 
     .card {
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      margin-top: 40px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-      text-align: center;
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 22px;
+      margin-top: 20px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
 
     h1 {
+      margin: 0 0 8px;
       font-size: 24px;
-      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 21px;
     }
 
     p {
@@ -45,10 +56,11 @@
     }
 
     .status {
-      margin-top: 30px;
       padding: 14px;
       border-radius: 10px;
       background: #f0f0f0;
+      margin-top: 18px;
+      line-height: 1.6;
     }
 
     .success {
@@ -64,8 +76,7 @@
     }
 
     .form-group {
-      margin-top: 24px;
-      text-align: left;
+      margin-top: 20px;
     }
 
     label {
@@ -76,29 +87,102 @@
 
     input {
       width: 100%;
-      box-sizing: border-box;
       padding: 14px;
+      font-size: 16px;
       border: 1px solid #ccc;
       border-radius: 10px;
-      font-size: 16px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #06c755;
     }
 
     button {
       width: 100%;
-      margin-top: 18px;
       padding: 14px;
       border: none;
       border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .primary-button {
       background: #06c755;
       color: white;
-      font-size: 16px;
       font-weight: bold;
-      cursor: pointer;
+    }
+
+    .secondary-button {
+      background: #eeeeee;
+      color: #222;
     }
 
     button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
+    }
+
+    .user-info {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #f4fbf6;
+      border-radius: 10px;
+    }
+
+    .search-wrapper {
+      position: relative;
+    }
+
+    .suggestion-list {
+      margin-top: 10px;
+    }
+
+    .suggestion-button {
+      background: #ffffff;
+      border: 1px solid #ddd;
+      color: #222;
+      text-align: left;
+      margin-top: 8px;
+      padding: 13px;
+    }
+
+    .suggestion-button:hover {
+      background: #f6f6f6;
+    }
+
+    .search-message {
+      margin-top: 14px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .recipe-card {
+      margin-top: 20px;
+    }
+
+    .recipe-title {
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 18px;
+    }
+
+    .step-item {
+      background: #f7f7f7;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .step-number {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .loading {
+      opacity: 0.7;
     }
   </style>
 </head>
@@ -107,16 +191,22 @@
 
   <div class="container">
 
+    <!-- ================================================= -->
+    <!-- Header -->
+    <!-- ================================================= -->
+
     <div class="card">
 
       <h1>ระบบค้นหาสูตรเครื่องดื่ม</h1>
 
-      <p>LIFF Version</p>
+      <p style="text-align:center;">
+        Drink Recipe System
+      </p>
 
 
-      <!-- ============================= -->
+      <!-- ================================================= -->
       <!-- สถานะระบบ -->
-      <!-- ============================= -->
+      <!-- ================================================= -->
 
       <div
         id="status"
@@ -126,9 +216,9 @@
       </div>
 
 
-      <!-- ============================= -->
+      <!-- ================================================= -->
       <!-- หน้าลงทะเบียน -->
-      <!-- ============================= -->
+      <!-- ================================================= -->
 
       <div
         id="registerSection"
@@ -146,16 +236,106 @@
             id="employeeId"
             placeholder="กรอกรหัสพนักงาน"
             inputmode="numeric"
+            autocomplete="off"
           >
 
         </div>
 
+
         <button
           id="registerButton"
+          class="primary-button"
           onclick="registerUser()"
         >
           ลงทะเบียน
         </button>
+
+      </div>
+
+
+      <!-- ================================================= -->
+      <!-- หน้าค้นหาสูตร -->
+      <!-- ================================================= -->
+
+      <div
+        id="searchSection"
+        class="hidden"
+      >
+
+        <div
+          id="userInfo"
+          class="user-info"
+        ></div>
+
+
+        <div class="form-group">
+
+          <label for="searchInput">
+            ค้นหาเมนูเครื่องดื่ม
+          </label>
+
+
+          <div class="search-wrapper">
+
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="พิมพ์ชื่อเมนู..."
+              autocomplete="off"
+            >
+
+          </div>
+
+        </div>
+
+
+        <button
+          id="searchButton"
+          class="primary-button"
+          onclick="manualSearch()"
+        >
+          ค้นหา
+        </button>
+
+
+        <div
+          id="searchMessage"
+          class="search-message"
+        ></div>
+
+
+        <!-- รายการแนะนำ -->
+        <div
+          id="suggestionList"
+          class="suggestion-list"
+        ></div>
+
+
+        <!-- สูตร -->
+        <div
+          id="recipeSection"
+          class="recipe-card hidden"
+        >
+
+          <div
+            id="recipeTitle"
+            class="recipe-title"
+          ></div>
+
+
+          <div
+            id="recipeSteps"
+          ></div>
+
+
+          <button
+            class="secondary-button"
+            onclick="clearRecipe()"
+          >
+            ค้นหาเมนูอื่น
+          </button>
+
+        </div>
 
       </div>
 
@@ -166,29 +346,42 @@
 
 <script>
 
-  // ===================================================
+  // =====================================================
   // ตั้งค่า LIFF
-  // ===================================================
+  // =====================================================
 
   const LIFF_ID =
     '2010750055-ukl2mGbL';
 
 
-  // ===================================================
-  // ใส่ Apps Script Web App URL /exec
-  // ===================================================
+  // =====================================================
+  // ใส่ Apps Script Web App URL ที่ลงท้ายด้วย /exec
+  // =====================================================
 
   const API_URL =
-    'https://script.google.com/macros/s/AKfycbzqJwPDxPBDX3ARXPowoUOIZfdtm4qgVC6EzO6AMg67qI8HjSWS8QXeKcQ45XYmTcFd/exec';
+    'ใส่_APPS_SCRIPT_URL_ตรงนี้';
 
+
+  // =====================================================
+  // ตัวแปรระบบ
+  // =====================================================
 
   let currentIdToken =
     null;
 
+  let currentUser =
+    null;
 
-  // ===================================================
-  // เริ่มต้นระบบ
-  // ===================================================
+  let menuCache =
+    [];
+
+  let searchTimer =
+    null;
+
+
+  // =====================================================
+  // เริ่มต้น LIFF
+  // =====================================================
 
   async function initializeLiff() {
 
@@ -197,21 +390,26 @@
         'status'
       );
 
+
     try {
 
       statusElement.className =
         'status';
+
 
       statusElement.innerHTML =
         'กำลังเชื่อมต่อกับ LINE...';
 
 
       await liff.init({
-        liffId: LIFF_ID
+        liffId:
+          LIFF_ID
       });
 
 
-      if (!liff.isLoggedIn()) {
+      if (
+        !liff.isLoggedIn()
+      ) {
 
         liff.login();
 
@@ -220,12 +418,13 @@
       }
 
 
-      // รับ ID Token
       currentIdToken =
         liff.getIDToken();
 
 
-      if (!currentIdToken) {
+      if (
+        !currentIdToken
+      ) {
 
         throw new Error(
           'ไม่สามารถรับข้อมูลยืนยันตัวตนจาก LINE ได้'
@@ -238,9 +437,9 @@
         'กำลังตรวจสอบสิทธิ์ผู้ใช้งาน...';
 
 
-      // ตรวจผู้ใช้กับ Backend
       const result =
         await callApi({
+
           source:
             'LIFF',
 
@@ -249,10 +448,13 @@
 
           idToken:
             currentIdToken
+
         });
 
 
-      if (!result.success) {
+      if (
+        !result.success
+      ) {
 
         throw new Error(
           result.message ||
@@ -262,65 +464,66 @@
       }
 
 
-      // ===============================================
+      // =================================================
       // ยังไม่ลงทะเบียน
-      // ===============================================
+      // =================================================
 
-      if (!result.registered) {
+      if (
+        !result.registered
+      ) {
 
-        statusElement.innerHTML =
-          'ยังไม่พบการลงทะเบียนของบัญชีนี้<br><br>' +
-          'กรุณากรอกรหัสพนักงานเพื่อเปิดใช้งาน';
-
-        document
-          .getElementById(
-            'registerSection'
-          )
-          .classList
-          .remove(
-            'hidden'
-          );
+        showRegisterScreen();
 
         return;
 
       }
 
 
-      // ===============================================
+      // =================================================
       // บัญชีถูกระงับ
-      // ===============================================
+      // =================================================
 
-      if (result.blocked) {
+      if (
+        result.blocked
+      ) {
 
         statusElement.className =
           'status error';
+
 
         statusElement.innerHTML =
           'บัญชีของคุณถูกระงับการใช้งาน<br><br>' +
           'กรุณาติดต่อผู้ดูแลระบบ';
 
+
         return;
 
       }
 
 
-      // ===============================================
-      // ลงทะเบียนแล้ว
-      // ===============================================
+      // =================================================
+      // ผู้ใช้ปกติ
+      // =================================================
 
-      showRegisteredUser(
-        result
-      );
+      currentUser =
+        result;
 
 
-    } catch (error) {
+      await showSearchScreen();
+
+
+    } catch (
+      error
+    ) {
 
       console.error(
         error
       );
 
+
       statusElement.className =
         'status error';
+
 
       statusElement.innerHTML =
         'เกิดข้อผิดพลาด<br><br>' +
@@ -332,21 +535,11 @@
 
 
 
-  // ===================================================
-  // ลงทะเบียนผู้ใช้ใหม่
-  // ===================================================
+  // =====================================================
+  // หน้าลงทะเบียน
+  // =====================================================
 
-  async function registerUser() {
-
-    const employeeIdInput =
-      document.getElementById(
-        'employeeId'
-      );
-
-    const registerButton =
-      document.getElementById(
-        'registerButton'
-      );
+  function showRegisterScreen() {
 
     const statusElement =
       document.getElementById(
@@ -354,19 +547,76 @@
       );
 
 
+    statusElement.className =
+      'status';
+
+
+    statusElement.innerHTML =
+      'ยังไม่พบการลงทะเบียนของบัญชีนี้<br><br>' +
+      'กรุณากรอกรหัสพนักงานเพื่อเปิดใช้งาน';
+
+
+    document
+      .getElementById(
+        'registerSection'
+      )
+      .classList
+      .remove(
+        'hidden'
+      );
+
+
+    document
+      .getElementById(
+        'searchSection'
+      )
+      .classList
+      .add(
+        'hidden'
+      );
+
+  }
+
+
+
+  // =====================================================
+  // ลงทะเบียนผู้ใช้
+  // =====================================================
+
+  async function registerUser() {
+
     const employeeId =
-      employeeIdInput
+      document
+        .getElementById(
+          'employeeId'
+        )
         .value
         .trim();
 
 
-    if (!employeeId) {
+    const registerButton =
+      document.getElementById(
+        'registerButton'
+      );
+
+
+    const statusElement =
+      document.getElementById(
+        'status'
+      );
+
+
+    if (
+      !employeeId
+    ) {
 
       statusElement.className =
         'status error';
 
+
       statusElement.innerHTML =
         'กรุณากรอกรหัสพนักงาน';
+
 
       return;
 
@@ -382,8 +632,10 @@
       statusElement.className =
         'status error';
 
+
       statusElement.innerHTML =
         'รูปแบบรหัสพนักงานไม่ถูกต้อง';
+
 
       return;
 
@@ -395,6 +647,7 @@
       registerButton.disabled =
         true;
 
+
       registerButton.innerHTML =
         'กำลังลงทะเบียน...';
 
@@ -402,12 +655,14 @@
       statusElement.className =
         'status';
 
+
       statusElement.innerHTML =
         'กำลังตรวจสอบรหัสพนักงาน...';
 
 
       const result =
         await callApi({
+
           source:
             'LIFF',
 
@@ -419,10 +674,13 @@
 
           employeeId:
             employeeId
+
         });
 
 
-      if (!result.success) {
+      if (
+        !result.success
+      ) {
 
         throw new Error(
           result.message ||
@@ -432,7 +690,23 @@
       }
 
 
-      // ซ่อนฟอร์มลงทะเบียน
+      currentUser = {
+
+        registered:
+          true,
+
+        blocked:
+          false,
+
+        employeeId:
+          result.employeeId,
+
+        name:
+          result.name
+
+      };
+
+
       document
         .getElementById(
           'registerSection'
@@ -443,21 +717,12 @@
         );
 
 
-      statusElement.className =
-        'status success';
-
-      statusElement.innerHTML =
-        'ลงทะเบียนสำเร็จ<br><br>' +
-        'ชื่อ: ' +
-        result.name +
-        '<br>' +
-        'รหัสพนักงาน: ' +
-        result.employeeId +
-        '<br><br>' +
-        'พร้อมเข้าสู่หน้าค้นหาสูตร';
+      await showSearchScreen();
 
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         error
@@ -467,6 +732,7 @@
       statusElement.className =
         'status error';
 
+
       statusElement.innerHTML =
         'ลงทะเบียนไม่สำเร็จ<br><br>' +
         error.message;
@@ -474,6 +740,7 @@
 
       registerButton.disabled =
         false;
+
 
       registerButton.innerHTML =
         'ลงทะเบียน';
@@ -484,13 +751,11 @@
 
 
 
-  // ===================================================
-  // แสดงข้อมูลผู้ใช้ที่ลงทะเบียนแล้ว
-  // ===================================================
+  // =====================================================
+  // เปิดหน้าค้นหา
+  // =====================================================
 
-  function showRegisteredUser(
-    result
-  ) {
+  async function showSearchScreen() {
 
     const statusElement =
       document.getElementById(
@@ -503,22 +768,857 @@
 
 
     statusElement.innerHTML =
-      'ตรวจสอบผู้ใช้สำเร็จ<br><br>' +
-      'ชื่อ: ' +
-      result.name +
-      '<br>' +
-      'รหัสพนักงาน: ' +
-      result.employeeId +
-      '<br><br>' +
-      'พร้อมเข้าสู่หน้าค้นหาสูตร';
+      'เข้าสู่ระบบสำเร็จ';
+
+
+    document
+      .getElementById(
+        'registerSection'
+      )
+      .classList
+      .add(
+        'hidden'
+      );
+
+
+    document
+      .getElementById(
+        'searchSection'
+      )
+      .classList
+      .remove(
+        'hidden'
+      );
+
+
+    document
+      .getElementById(
+        'userInfo'
+      )
+      .innerHTML =
+        'ผู้ใช้งาน: ' +
+        escapeHtml(
+          currentUser.name || ''
+        );
+
+
+    await loadMenuList();
 
   }
 
 
 
-  // ===================================================
+  // =====================================================
+  // โหลดรายชื่อเมนูครั้งเดียว
+  // =====================================================
+
+  async function loadMenuList() {
+
+    const searchMessage =
+      document.getElementById(
+        'searchMessage'
+      );
+
+
+    try {
+
+      searchMessage.innerHTML =
+        'กำลังโหลดรายชื่อเมนู...';
+
+
+      const result =
+        await callApi({
+
+          source:
+            'LIFF',
+
+          action:
+            'getMenuList',
+
+          idToken:
+            currentIdToken
+
+        });
+
+
+      if (
+        !result.success
+      ) {
+
+        throw new Error(
+          result.message ||
+          'โหลดรายชื่อเมนูไม่สำเร็จ'
+        );
+
+      }
+
+
+      menuCache =
+        Array.isArray(
+          result.menus
+        )
+          ? result.menus
+          : [];
+
+
+      searchMessage.innerHTML =
+        'พร้อมค้นหา ' +
+        menuCache.length +
+        ' เมนู';
+
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        error
+      );
+
+
+      searchMessage.innerHTML =
+        'ไม่สามารถโหลดรายชื่อเมนูได้: ' +
+        error.message;
+
+    }
+
+  }
+
+
+
+  // =====================================================
+  // Live Search
+  // =====================================================
+
+  document
+    .getElementById(
+      'searchInput'
+    )
+    .addEventListener(
+      'input',
+      function() {
+
+        clearTimeout(
+          searchTimer
+        );
+
+
+        const keyword =
+          this.value
+            .trim();
+
+
+        if (
+          keyword.length < 2
+        ) {
+
+          clearSuggestions();
+
+          return;
+
+        }
+
+
+        searchTimer =
+          setTimeout(
+            function() {
+
+              runLocalSearch(
+                keyword
+              );
+
+            },
+            300
+          );
+
+      }
+    );
+
+
+
+  // =====================================================
+  // Local Search + Fuzzy Search
+  // =====================================================
+
+  function runLocalSearch(
+    keyword
+  ) {
+
+    const normalizedKeyword =
+      normalizeText(
+        keyword
+      );
+
+
+    const scoredResults =
+      menuCache
+        .map(
+          function(
+            item
+          ) {
+
+            const menuName =
+              item.menuName || '';
+
+
+            const normalizedMenu =
+              normalizeText(
+                menuName
+              );
+
+
+            const score =
+              calculateMatchScore(
+                normalizedKeyword,
+                normalizedMenu
+              );
+
+
+            return {
+
+              menuName:
+                menuName,
+
+              score:
+                score
+
+            };
+
+          }
+        )
+        .filter(
+          function(
+            item
+          ) {
+
+            return (
+              item.score > 0
+            );
+
+          }
+        )
+        .sort(
+          function(
+            a,
+            b
+          ) {
+
+            return (
+              b.score -
+              a.score
+            );
+
+          }
+        )
+        .slice(
+          0,
+          10
+        );
+
+
+    displaySuggestions(
+      scoredResults
+    );
+
+  }
+
+
+
+  // =====================================================
+  // คำนวณคะแนนความใกล้เคียง
+  // =====================================================
+
+  function calculateMatchScore(
+    keyword,
+    menuName
+  ) {
+
+    if (
+      !keyword ||
+      !menuName
+    ) {
+
+      return 0;
+
+    }
+
+
+    // ตรงทั้งหมด
+    if (
+      menuName ===
+      keyword
+    ) {
+
+      return 1000;
+
+    }
+
+
+    // ขึ้นต้นเหมือนกัน
+    if (
+      menuName.startsWith(
+        keyword
+      )
+    ) {
+
+      return (
+        800 -
+        (
+          menuName.length -
+          keyword.length
+        )
+      );
+
+    }
+
+
+    // มีคำอยู่ภายใน
+    if (
+      menuName.includes(
+        keyword
+      )
+    ) {
+
+      return (
+        600 -
+        menuName.indexOf(
+          keyword
+        )
+      );
+
+    }
+
+
+    // Fuzzy Search ด้วย Levenshtein Distance
+    const distance =
+      levenshteinDistance(
+        keyword,
+        menuName
+      );
+
+
+    const maxLength =
+      Math.max(
+        keyword.length,
+        menuName.length
+      );
+
+
+    const similarity =
+      1 -
+      (
+        distance /
+        maxLength
+      );
+
+
+    // แสดงเฉพาะที่คล้ายพอสมควร
+    if (
+      similarity >= 0.45
+    ) {
+
+      return (
+        similarity *
+        400
+      );
+
+    }
+
+
+    return 0;
+
+  }
+
+
+
+  // =====================================================
+  // Levenshtein Distance
+  // =====================================================
+
+  function levenshteinDistance(
+    a,
+    b
+  ) {
+
+    const matrix =
+      [];
+
+
+    for (
+      let i = 0;
+      i <= b.length;
+      i++
+    ) {
+
+      matrix[i] =
+        [i];
+
+    }
+
+
+    for (
+      let j = 0;
+      j <= a.length;
+      j++
+    ) {
+
+      matrix[0][j] =
+        j;
+
+    }
+
+
+    for (
+      let i = 1;
+      i <= b.length;
+      i++
+    ) {
+
+      for (
+        let j = 1;
+        j <= a.length;
+        j++
+      ) {
+
+        if (
+          b.charAt(
+            i - 1
+          ) ===
+          a.charAt(
+            j - 1
+          )
+        ) {
+
+          matrix[i][j] =
+            matrix[i - 1][j - 1];
+
+        } else {
+
+          matrix[i][j] =
+            Math.min(
+
+              matrix[i - 1][j - 1] + 1,
+
+              matrix[i][j - 1] + 1,
+
+              matrix[i - 1][j] + 1
+
+            );
+
+        }
+
+      }
+
+    }
+
+
+    return (
+      matrix[b.length][a.length]
+    );
+
+  }
+
+
+
+  // =====================================================
+  // แสดงรายการแนะนำเป็นปุ่ม
+  // =====================================================
+
+  function displaySuggestions(
+    results
+  ) {
+
+    const suggestionList =
+      document.getElementById(
+        'suggestionList'
+      );
+
+
+    suggestionList.innerHTML =
+      '';
+
+
+    if (
+      results.length === 0
+    ) {
+
+      suggestionList.innerHTML =
+        '<p>ไม่พบเมนูที่ใกล้เคียง</p>';
+
+      return;
+
+    }
+
+
+    results.forEach(
+      function(
+        item
+      ) {
+
+        const button =
+          document.createElement(
+            'button'
+          );
+
+
+        button.className =
+          'suggestion-button';
+
+
+        button.textContent =
+          item.menuName;
+
+
+        button.onclick =
+          function() {
+
+            openRecipe(
+              item.menuName
+            );
+
+          };
+
+
+        suggestionList.appendChild(
+          button
+        );
+
+      }
+    );
+
+  }
+
+
+
+  // =====================================================
+  // Manual Search
+  // =====================================================
+
+  function manualSearch() {
+
+    const keyword =
+      document
+        .getElementById(
+          'searchInput'
+        )
+        .value
+        .trim();
+
+
+    if (
+      !keyword
+    ) {
+
+      return;
+
+    }
+
+
+    runLocalSearch(
+      keyword
+    );
+
+  }
+
+
+
+  // =====================================================
+  // เปิดสูตรจริงจาก Backend
+  // =====================================================
+
+  async function openRecipe(
+    menuName
+  ) {
+
+    const searchMessage =
+      document.getElementById(
+        'searchMessage'
+      );
+
+
+    try {
+
+      searchMessage.innerHTML =
+        'กำลังโหลดสูตร...';
+
+
+      const result =
+        await callApi({
+
+          source:
+            'LIFF',
+
+          action:
+            'getRecipe',
+
+          idToken:
+            currentIdToken,
+
+          menuName:
+            menuName
+
+        });
+
+
+      if (
+        !result.success
+      ) {
+
+        throw new Error(
+          result.message ||
+          'ไม่สามารถโหลดสูตรได้'
+        );
+
+      }
+
+
+      displayRecipe(
+        result.recipe
+      );
+
+
+      searchMessage.innerHTML =
+        '';
+
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        error
+      );
+
+
+      searchMessage.innerHTML =
+        'เกิดข้อผิดพลาด: ' +
+        error.message;
+
+    }
+
+  }
+
+
+
+  // =====================================================
+  // แสดงสูตร
+  // =====================================================
+
+  function displayRecipe(
+    recipe
+  ) {
+
+    const recipeSection =
+      document.getElementById(
+        'recipeSection'
+      );
+
+
+    const recipeTitle =
+      document.getElementById(
+        'recipeTitle'
+      );
+
+
+    const recipeSteps =
+      document.getElementById(
+        'recipeSteps'
+      );
+
+
+    recipeTitle.textContent =
+      recipe.menuName || '';
+
+
+    recipeSteps.innerHTML =
+      '';
+
+
+    if (
+      !recipe.steps ||
+      recipe.steps.length === 0
+    ) {
+
+      recipeSteps.innerHTML =
+        '<p>ยังไม่มีข้อมูลขั้นตอนการทำ</p>';
+
+    } else {
+
+      recipe.steps.forEach(
+        function(
+          step
+        ) {
+
+          const stepElement =
+            document.createElement(
+              'div'
+            );
+
+
+          stepElement.className =
+            'step-item';
+
+
+          stepElement.innerHTML =
+
+            '<div class="step-number">' +
+
+            'ขั้นตอนที่ ' +
+
+            escapeHtml(
+              String(
+                step.stepNumber
+              )
+            ) +
+
+            '</div>' +
+
+            '<div>' +
+
+            escapeHtml(
+              step.text
+            ) +
+
+            '</div>';
+
+
+          recipeSteps.appendChild(
+            stepElement
+          );
+
+        }
+      );
+
+    }
+
+
+    recipeSection
+      .classList
+      .remove(
+        'hidden'
+      );
+
+
+    document
+      .getElementById(
+        'suggestionList'
+      )
+      .innerHTML =
+      '';
+
+
+    recipeSection.scrollIntoView({
+      behavior:
+        'smooth'
+    });
+
+  }
+
+
+
+  // =====================================================
+  // ล้างสูตรเพื่อค้นหาใหม่
+  // =====================================================
+
+  function clearRecipe() {
+
+    document
+      .getElementById(
+        'recipeSection'
+      )
+      .classList
+      .add(
+        'hidden'
+      );
+
+
+    document
+      .getElementById(
+        'searchInput'
+      )
+      .value =
+      '';
+
+
+    clearSuggestions();
+
+
+    document
+      .getElementById(
+        'searchInput'
+      )
+      .focus();
+
+  }
+
+
+
+  // =====================================================
+  // ล้าง Suggestions
+  // =====================================================
+
+  function clearSuggestions() {
+
+    document
+      .getElementById(
+        'suggestionList'
+      )
+      .innerHTML =
+      '';
+
+  }
+
+
+
+  // =====================================================
+  // Normalize Text
+  // =====================================================
+
+  function normalizeText(
+    text
+  ) {
+
+    return String(
+      text || ''
+    )
+      .toLowerCase()
+      .trim()
+      .replace(
+        /\s+/g,
+        ''
+      );
+
+  }
+
+
+
+  // =====================================================
+  // ป้องกัน HTML Injection
+  // =====================================================
+
+  function escapeHtml(
+    text
+  ) {
+
+    const div =
+      document.createElement(
+        'div'
+      );
+
+
+    div.textContent =
+      text;
+
+
+    return div.innerHTML;
+
+  }
+
+
+
+  // =====================================================
   // เรียก Apps Script API
-  // ===================================================
+  // =====================================================
 
   async function callApi(
     payload
@@ -528,23 +1628,29 @@
       await fetch(
         API_URL,
         {
+
           method:
             'POST',
 
           headers: {
+
             'Content-Type':
               'text/plain;charset=utf-8'
+
           },
 
           body:
             JSON.stringify(
               payload
             )
+
         }
       );
 
 
-    if (!response.ok) {
+    if (
+      !response.ok
+    ) {
 
       throw new Error(
         'ไม่สามารถเชื่อมต่อระบบได้'
@@ -559,9 +1665,9 @@
 
 
 
-  // ===================================================
-  // เริ่มทำงานเมื่อหน้าโหลด
-  // ===================================================
+  // =====================================================
+  // เริ่มระบบ
+  // =====================================================
 
   window.addEventListener(
     'load',
