@@ -55,6 +55,26 @@
       color: #666;
     }
 
+    .brand-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .brand-logo {
+      display: block;
+      width: 128px;
+      max-width: 42%;
+      height: auto;
+      margin: 0 auto 14px;
+      object-fit: contain;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: #777;
+      font-size: 15px;
+    }
+
     .status {
       padding: 14px;
       border-radius: 10px;
@@ -95,7 +115,7 @@
     }
 
     input:focus {
-      border-color: #06c755;
+      border-color: #f15a24;
     }
 
     button {
@@ -109,7 +129,7 @@
     }
 
     .primary-button {
-      background: #06c755;
+      background: #f15a24;
       color: white;
       font-weight: bold;
     }
@@ -117,6 +137,10 @@
     .secondary-button {
       background: #eeeeee;
       color: #222;
+    }
+
+    .primary-button:hover {
+      background: #d94b1b;
     }
 
     button:disabled {
@@ -197,11 +221,21 @@
 
     <div class="card">
 
-      <h1>ระบบค้นหาสูตรเครื่องดื่ม</h1>
+      <div class="brand-header">
 
-      <p style="text-align:center;">
-        Drink Recipe System
-      </p>
+        <img
+          src="assets/kudsan-logo.png"
+          alt="โลโก้ KUDSAN"
+          class="brand-logo"
+        >
+
+        <h1>ระบบค้นหาสูตรเครื่องดื่ม</h1>
+
+        <p class="subtitle">
+          Drink Recipe Search System
+        </p>
+
+      </div>
 
 
       <!-- ================================================= -->
