@@ -1539,9 +1539,33 @@
         searchTaskTime;
 
 
+      const displayedMenuName =
+        result.recipe &&
+        result.recipe.menuName
+          ? result.recipe.menuName
+          : menuName;
+
+
+      const responseTime =
+        Number.isFinite(
+          Number(
+            result.responseTime
+          )
+        )
+          ? Math.round(
+              Number(
+                result.responseTime
+              )
+            )
+          : 0;
+
+
       console.log(
         '[Performance Metrics]',
         {
+          responseTime:
+            responseTime,
+
           pageLoadTime:
             pageLoadTime,
 
@@ -1552,16 +1576,39 @@
             totalRetrievalTime,
 
           menuName:
-            result.recipe &&
-            result.recipe.menuName
-              ? result.recipe.menuName
-              : menuName
+            displayedMenuName
         }
       );
 
 
+      // สูตรแสดงแล้ว จึงล้างข้อความโหลดก่อนบันทึก Log
       searchMessage.innerHTML =
         '';
+
+
+      // ส่งข้อมูลการใช้งานไปบันทึกใน Google Sheets
+      // หากการบันทึก Log ล้มเหลว สูตรที่แสดงอยู่จะไม่หาย
+      await sendRecipeLog({
+
+        menuName:
+          displayedMenuName,
+
+        intent:
+          'เปิดสูตร',
+
+        responseTime:
+          responseTime,
+
+        pageLoadTime:
+          pageLoadTime,
+
+        searchTaskTime:
+          searchTaskTime,
+
+        totalRetrievalTime:
+          totalRetrievalTime
+
+      });
 
 
     } catch (
@@ -1576,6 +1623,93 @@
       searchMessage.innerHTML =
         'เกิดข้อผิดพลาด: ' +
         error.message;
+
+    }
+
+  }
+
+
+
+  // =====================================================
+  // ส่ง Log หลังสูตรแสดงบนหน้าจอสำเร็จ
+  // =====================================================
+
+  async function sendRecipeLog(
+    metrics
+  ) {
+
+    try {
+
+      const result =
+        await callApi({
+
+          source:
+            'LIFF',
+
+          action:
+            'logRecipe',
+
+          idToken:
+            currentIdToken,
+
+          menuName:
+            metrics.menuName,
+
+          intent:
+            metrics.intent,
+
+          responseTime:
+            metrics.responseTime,
+
+          pageLoadTime:
+            metrics.pageLoadTime,
+
+          searchTaskTime:
+            metrics.searchTaskTime,
+
+          totalRetrievalTime:
+            metrics.totalRetrievalTime
+
+        });
+
+
+      if (
+        !result.success
+      ) {
+
+        console.warn(
+          '[Log] บันทึกไม่สำเร็จ:',
+          result.message ||
+          'ไม่ทราบสาเหตุ'
+        );
+
+        return false;
+
+      }
+
+
+      console.log(
+        '[Log] บันทึกสำเร็จ',
+        metrics
+      );
+
+
+      return true;
+
+
+    } catch (
+      error
+    ) {
+
+      // ไม่แสดง Error ต่อผู้ใช้
+      // เพราะสูตรถูกโหลดและแสดงสำเร็จแล้ว
+      console.warn(
+        '[Log] เกิดข้อผิดพลาด:',
+        error.message
+      );
+
+
+      return false;
 
     }
 
