@@ -10,6 +10,12 @@
 
   <title>ระบบค้นหาสูตรเครื่องดื่ม</title>
 
+  <!-- เริ่มจับเวลาทันทีที่หน้าเว็บเริ่มทำงาน -->
+  <script>
+    window.__pageLoadStart =
+      performance.now();
+  </script>
+
   <!-- LINE LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
@@ -414,6 +420,27 @@
 
 
   // =====================================================
+  // ตัวแปรจับเวลาประสิทธิภาพ
+  // =====================================================
+
+  let pageLoadStart =
+    window.__pageLoadStart ||
+    performance.now();
+
+  let pageLoadTime =
+    0;
+
+  let searchStartTime =
+    null;
+
+  let searchTaskTime =
+    0;
+
+  let totalRetrievalTime =
+    0;
+
+
+  // =====================================================
   // เริ่มต้น LIFF
   // =====================================================
 
@@ -751,6 +778,12 @@
         );
 
 
+      // เริ่มจับ Page Load Time ใหม่หลังลงทะเบียนสำเร็จ
+      // เพื่อไม่รวมเวลาที่ผู้ใช้ใช้กรอกรหัสพนักงาน
+      pageLoadStart =
+        performance.now();
+
+
       await showSearchScreen();
 
 
@@ -836,7 +869,31 @@
         );
 
 
-    await loadMenuList();
+    const menuLoaded =
+      await loadMenuList();
+
+
+    if (
+      menuLoaded
+    ) {
+
+      await waitForNextPaint();
+
+
+      pageLoadTime =
+        Math.round(
+          performance.now() -
+          pageLoadStart
+        );
+
+
+      console.log(
+        '[Performance Metrics] Page Load Time:',
+        pageLoadTime,
+        'ms'
+      );
+
+    }
 
   }
 
@@ -901,6 +958,9 @@
         ' เมนู';
 
 
+      return true;
+
+
     } catch (
       error
     ) {
@@ -913,6 +973,9 @@
       searchMessage.innerHTML =
         'ไม่สามารถโหลดรายชื่อเมนูได้: ' +
         error.message;
+
+
+      return false;
 
     }
 
@@ -940,6 +1003,31 @@
         const keyword =
           this.value
             .trim();
+
+
+        // ล้างข้อความทั้งหมด = ยกเลิกรอบค้นหานี้
+        if (
+          keyword.length === 0
+        ) {
+
+          resetSearchTiming();
+
+          clearSuggestions();
+
+          return;
+
+        }
+
+
+        // เริ่มจับเวลาที่ตัวอักษรตัวแรก
+        if (
+          searchStartTime === null
+        ) {
+
+          searchStartTime =
+            performance.now();
+
+        }
 
 
         if (
@@ -1348,6 +1436,16 @@
     }
 
 
+    if (
+      searchStartTime === null
+    ) {
+
+      searchStartTime =
+        performance.now();
+
+    }
+
+
     runLocalSearch(
       keyword
     );
@@ -1371,6 +1469,16 @@
 
 
     try {
+
+      if (
+        searchStartTime === null
+      ) {
+
+        searchStartTime =
+          performance.now();
+
+      }
+
 
       searchMessage.innerHTML =
         'กำลังโหลดสูตร...';
@@ -1408,6 +1516,47 @@
 
       displayRecipe(
         result.recipe
+      );
+
+
+      // รอให้เบราว์เซอร์วาดสูตรลงหน้าจอจริง
+      await waitForNextPaint();
+
+
+      searchTaskTime =
+        searchStartTime !== null
+          ? Math.round(
+              performance.now() -
+              searchStartTime
+            )
+          : 0;
+
+
+      // Total Retrieval Time ใช้ผลรวมของเวลาโหลดระบบ
+      // และเวลาค้นหาสูตร เพื่อไม่รวมเวลาที่ผู้ใช้หยุดรอก่อนเริ่มพิมพ์
+      totalRetrievalTime =
+        pageLoadTime +
+        searchTaskTime;
+
+
+      console.log(
+        '[Performance Metrics]',
+        {
+          pageLoadTime:
+            pageLoadTime,
+
+          searchTaskTime:
+            searchTaskTime,
+
+          totalRetrievalTime:
+            totalRetrievalTime,
+
+          menuName:
+            result.recipe &&
+            result.recipe.menuName
+              ? result.recipe.menuName
+              : menuName
+        }
       );
 
 
@@ -1577,6 +1726,9 @@
     clearSuggestions();
 
 
+    resetSearchTiming();
+
+
     document
       .getElementById(
         'searchInput'
@@ -1599,6 +1751,53 @@
       )
       .innerHTML =
       '';
+
+  }
+
+
+
+  // =====================================================
+  // รีเซ็ตเวลาของรอบค้นหา
+  // =====================================================
+
+  function resetSearchTiming() {
+
+    searchStartTime =
+      null;
+
+    searchTaskTime =
+      0;
+
+    totalRetrievalTime =
+      0;
+
+  }
+
+
+
+  // =====================================================
+  // รอให้เบราว์เซอร์วาดหน้าจอเสร็จ
+  // =====================================================
+
+  function waitForNextPaint() {
+
+    return new Promise(
+      function(
+        resolve
+      ) {
+
+        requestAnimationFrame(
+          function() {
+
+            requestAnimationFrame(
+              resolve
+            );
+
+          }
+        );
+
+      }
+    );
 
   }
 
