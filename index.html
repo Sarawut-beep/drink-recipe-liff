@@ -161,23 +161,28 @@
       border-radius: 10px;
     }
 
-    .search-actions {
+    .menu-status-bar {
       display: flex;
-      justify-content: flex-end;
-      margin-bottom: 12px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
     }
 
     .refresh-data-button {
       width: auto;
-      margin: 0;
-      padding: 9px 12px;
-      background: #eeeeee;
-      color: #222;
+      margin: 0 0 0 auto;
+      padding: 8px 12px;
+      background: #fff7f2;
+      border: 1px solid #f15a24;
+      color: #d94b1b;
       font-size: 13px;
+      font-weight: 600;
     }
 
     .refresh-data-button:hover {
-      background: #e0e0e0;
+      background: #ffede3;
     }
 
     .search-wrapper {
@@ -202,7 +207,8 @@
     }
 
     .search-message {
-      margin-top: 14px;
+      flex: 1 1 180px;
+      margin: 0;
       color: #666;
       font-size: 14px;
     }
@@ -343,18 +349,6 @@
         class="hidden"
       >
 
-        <div class="search-actions">
-
-          <button
-            id="refreshDataButton"
-            class="refresh-data-button"
-            onclick="refreshRecipeData()"
-          >
-            อัพเดตข้อมูลสูตร
-          </button>
-
-        </div>
-
         <div
           id="userInfo"
           class="user-info"
@@ -391,10 +385,23 @@
         </button>
 
 
-        <div
-          id="searchMessage"
-          class="search-message"
-        ></div>
+        <div class="menu-status-bar">
+
+          <div
+            id="searchMessage"
+            class="search-message"
+          ></div>
+
+
+          <button
+            id="refreshDataButton"
+            class="refresh-data-button"
+            onclick="refreshRecipeData()"
+          >
+            อัพเดตข้อมูลสูตร
+          </button>
+
+        </div>
 
 
         <!-- รายการแนะนำ -->
