@@ -161,6 +161,25 @@
       border-radius: 10px;
     }
 
+    .search-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .refresh-data-button {
+      width: auto;
+      margin: 0;
+      padding: 9px 12px;
+      background: #eeeeee;
+      color: #222;
+      font-size: 13px;
+    }
+
+    .refresh-data-button:hover {
+      background: #e0e0e0;
+    }
+
     .search-wrapper {
       position: relative;
     }
@@ -323,6 +342,18 @@
         id="searchSection"
         class="hidden"
       >
+
+        <div class="search-actions">
+
+          <button
+            id="refreshDataButton"
+            class="refresh-data-button"
+            onclick="refreshRecipeData()"
+          >
+            อัพเดตข้อมูลสูตร
+          </button>
+
+        </div>
 
         <div
           id="userInfo"
@@ -2508,6 +2539,85 @@
 
 
       return false;
+
+    }
+
+  }
+
+
+
+  // =====================================================
+  // อัพเดตรายชื่อเมนูและสร้าง Menu Cache ใหม่ด้วยตนเอง
+  // =====================================================
+
+  async function refreshRecipeData() {
+
+    const refreshButton =
+      document.getElementById(
+        'refreshDataButton'
+      );
+
+
+    const searchMessage =
+      document.getElementById(
+        'searchMessage'
+      );
+
+
+    if (
+      !refreshButton ||
+      !currentIdToken
+    ) {
+
+      searchMessage.innerHTML =
+        'ยังไม่สามารถอัพเดตข้อมูลสูตรได้';
+
+
+      return;
+
+    }
+
+
+    refreshButton.disabled =
+      true;
+
+
+    refreshButton.innerHTML =
+      'กำลังอัพเดต...';
+
+
+    markForegroundActivity();
+
+
+    try {
+
+      const refreshed =
+        await loadMenuList();
+
+
+      if (
+        refreshed
+      ) {
+
+        clearSuggestions();
+
+
+        searchMessage.innerHTML =
+          'อัพเดตข้อมูลสูตรแล้ว ' +
+          menuCache.length +
+          ' เมนู';
+
+      }
+
+
+    } finally {
+
+      refreshButton.disabled =
+        false;
+
+
+      refreshButton.innerHTML =
+        'อัพเดตข้อมูลสูตร';
 
     }
 
