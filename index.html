@@ -483,6 +483,83 @@
   let searchTimer =
     null;
 
+  let searchStatusTimer =
+    null;
+
+  let searchGeneration =
+    0;
+
+
+  function createSessionId() {
+
+    try {
+
+      if (
+        window.crypto &&
+        typeof window.crypto.randomUUID ===
+          'function'
+      ) {
+
+        return window.crypto.randomUUID();
+
+      }
+
+
+      if (
+        window.crypto &&
+        typeof window.crypto.getRandomValues ===
+          'function'
+      ) {
+
+        const values =
+          new Uint32Array(4);
+
+
+        window.crypto.getRandomValues(
+          values
+        );
+
+
+        return Array.from(
+          values,
+          function(value) {
+
+            return value
+              .toString(16)
+              .padStart(8, '0');
+
+          }
+        ).join('-');
+
+      }
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[Session] ใช้ fallback Session ID:',
+        error.message
+      );
+
+    }
+
+
+    return (
+      'session-' +
+      Date.now().toString(36) +
+      '-' +
+      Math.random()
+        .toString(36)
+        .slice(2)
+    );
+
+  }
+
+
+  const sessionId =
+    createSessionId();
+
 
   // =====================================================
   // STEP 5: Menu Cache 48 ชั่วโมง
@@ -2889,6 +2966,18 @@
         );
 
 
+        clearTimeout(
+          searchStatusTimer
+        );
+
+
+        searchGeneration++;
+
+
+        const thisSearchGeneration =
+          searchGeneration;
+
+
         const keyword =
           this.value
             .trim();
@@ -2917,6 +3006,92 @@
             performance.now();
 
         }
+
+
+        searchStatusTimer =
+          setTimeout(
+            function() {
+
+              const currentKeyword =
+                document
+                  .getElementById(
+                    'searchInput'
+                  )
+                  .value
+                  .trim();
+
+
+              if (
+                thisSearchGeneration !==
+                  searchGeneration ||
+                currentKeyword !== keyword
+              ) {
+
+                return;
+
+              }
+
+
+              const results =
+                runLocalSearch(
+                  keyword,
+                  false
+                );
+
+
+              if (
+                results.length !== 0
+              ) {
+
+                return;
+
+              }
+
+
+              const completedSearchTaskTime =
+                searchStartTime === null
+                  ? 0
+                  : Math.max(
+                      1,
+                      Math.round(
+                        performance.now() -
+                        searchStartTime
+                      )
+                    );
+
+
+              sendRecipeLog({
+
+                menuName:
+                  keyword,
+
+                intent:
+                  'ค้นหา',
+
+                responseTime:
+                  0,
+
+                pageLoadTime:
+                  pageLoadTime,
+
+                searchTaskTime:
+                  completedSearchTaskTime,
+
+                totalRetrievalTime:
+                  pageLoadTime +
+                  completedSearchTaskTime,
+
+                searchStatus:
+                  'ไม่พบสูตร',
+
+                sessionId:
+                  sessionId
+
+              });
+
+            },
+            5000
+          );
 
 
         if (
@@ -2952,7 +3127,8 @@
   // =====================================================
 
   function runLocalSearch(
-    keyword
+    keyword,
+    shouldDisplay = true
   ) {
 
     const normalizedKeyword =
@@ -3027,9 +3203,16 @@
         );
 
 
-    displaySuggestions(
-      scoredResults
-    );
+    if (shouldDisplay) {
+
+      displaySuggestions(
+        scoredResults
+      );
+
+    }
+
+
+    return scoredResults;
 
   }
 
@@ -3378,6 +3561,14 @@
       return;
 
     }
+
+
+    clearTimeout(
+      searchStatusTimer
+    );
+
+
+    searchGeneration++;
 
 
     markForegroundActivity();
@@ -3750,7 +3941,13 @@
           completedSearchTaskTime,
 
         totalRetrievalTime:
-          completedTotalRetrievalTime
+          completedTotalRetrievalTime,
+
+        searchStatus:
+          'สำเร็จ',
+
+        sessionId:
+          sessionId
 
       });
 
@@ -3840,7 +4037,14 @@
             metrics.searchTaskTime,
 
           totalRetrievalTime:
-            metrics.totalRetrievalTime
+            metrics.totalRetrievalTime,
+
+          searchStatus:
+            metrics.searchStatus || '',
+
+          sessionId:
+            metrics.sessionId ||
+            sessionId
 
         });
 
@@ -4067,6 +4271,12 @@
   // =====================================================
 
   function resetSearchTiming() {
+
+    clearTimeout(
+      searchStatusTimer
+    );
+
+    searchGeneration++;
 
     searchStartTime =
       null;
