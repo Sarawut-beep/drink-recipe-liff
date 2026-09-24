@@ -3993,6 +3993,49 @@
         'เกิดข้อผิดพลาด: ' +
         error.message;
 
+
+      // สูตรไม่ถูกแสดงหลังผู้ใช้เลือกเมนู
+      // บันทึกเหตุการณ์ล้มเหลวเพียง 1 ครั้งต่อการเปิดสูตร
+      // โดยไม่เพิ่ม request ระหว่างการพิมพ์หรือช่วงใช้งานปกติ
+      const failedSearchTaskTime =
+        Math.max(
+          1,
+          Math.round(
+            performance.now() -
+            thisSearchStartTime
+          )
+        );
+
+
+      await sendRecipeLog({
+
+        menuName:
+          menuName,
+
+        intent:
+          'เปิดสูตร',
+
+        responseTime:
+          0,
+
+        pageLoadTime:
+          pageLoadTime,
+
+        searchTaskTime:
+          failedSearchTaskTime,
+
+        totalRetrievalTime:
+          pageLoadTime +
+          failedSearchTaskTime,
+
+        searchStatus:
+          'ยกเลิก/ไม่มีปฏิสัมพันธ์',
+
+        sessionId:
+          sessionId
+
+      });
+
     }
 
   }
@@ -4000,7 +4043,7 @@
 
 
   // =====================================================
-  // ส่ง Log หลังสูตรแสดงบนหน้าจอสำเร็จ
+  // ส่ง Log ผลการเปิดสูตรหรือการค้นหาที่สรุปผลแล้ว
   // =====================================================
 
   async function sendRecipeLog(

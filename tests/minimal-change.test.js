@@ -230,7 +230,15 @@ async function run() {
   const failed = openRecipeHarness(async () => { throw new Error('slow/error'); });
   await failed.openRecipe('ลาเต้');
   assert.strictEqual(failed.isLoading(), false);
-  assert.strictEqual(failed.logs.length, 0);
+  assert.strictEqual(failed.logs.length, 1, 'failed recipe opening must create one outcome log');
+  assert.strictEqual(failed.logs[0].menuName, 'ลาเต้');
+  assert.strictEqual(failed.logs[0].intent, 'เปิดสูตร');
+  assert.strictEqual(failed.logs[0].searchStatus, 'ยกเลิก/ไม่มีปฏิสัมพันธ์');
+  assert.strictEqual(failed.logs[0].sessionId, 'session-test');
+  assert.strictEqual(
+    failed.logs[0].totalRetrievalTime,
+    failed.logs[0].pageLoadTime + failed.logs[0].searchTaskTime
+  );
 
   const oldCaller = logHarness(['', '']);
   const ok = oldCaller.writeLog(oldCaller.spreadsheet, 'E1', 'U1', 'Name', 'Menu', 'เปิดสูตร', 10, 20, 30, 50);
