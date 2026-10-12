@@ -464,7 +464,7 @@
   // =====================================================
 
   const API_URL =
-    'https://script.google.com/macros/s/AKfycbzqJwPDxPBDX3ARXPowoUOIZfdtm4qgVC6EzO6AMg67qI8HjSWS8QXeKcQ45XYmTcFd/exec';
+    'https://script.google.com/macros/s/AKfycbwynX6TsV4u17lZPKpiWw0Wpwz4C1r-rMXNF9L9jlvz6HYFP2jlo4_FgVYwNT_xIJ7e/exec';
 
 
   // =====================================================
@@ -1271,6 +1271,111 @@
 
   let isLoadingRecipe =
     false;
+
+  let isRecoveringLineToken =
+    false;
+
+  const LINE_TOKEN_RECOVERY_GUARD_KEY =
+    'drink_recipe_line_token_recovery_attempted_v1';
+
+  const LINE_TOKEN_RECOVERY_GUARD_TTL_MS =
+    5 * 60 * 1000;
+
+
+  function hasRecentLineTokenRecoveryAttempt() {
+
+    try {
+
+      const attemptedAt =
+        Number(
+          sessionStorage.getItem(
+            LINE_TOKEN_RECOVERY_GUARD_KEY
+          )
+        );
+
+
+      if (
+        !Number.isFinite(attemptedAt) ||
+        attemptedAt <= 0 ||
+        Date.now() - attemptedAt >
+          LINE_TOKEN_RECOVERY_GUARD_TTL_MS
+      ) {
+
+        sessionStorage.removeItem(
+          LINE_TOKEN_RECOVERY_GUARD_KEY
+        );
+
+
+        return false;
+
+      }
+
+
+      return true;
+
+
+    } catch (error) {
+
+      console.warn(
+        '[LINE Token Recovery] ไม่สามารถอ่าน recovery guard ได้',
+        error
+      );
+
+
+      return true;
+
+    }
+
+  }
+
+
+  function markLineTokenRecoveryAttempted() {
+
+    try {
+
+      sessionStorage.setItem(
+        LINE_TOKEN_RECOVERY_GUARD_KEY,
+        String(Date.now())
+      );
+
+
+      return true;
+
+
+    } catch (error) {
+
+      console.warn(
+        '[LINE Token Recovery] ไม่สามารถบันทึก recovery guard ได้',
+        error
+      );
+
+
+      return false;
+
+    }
+
+  }
+
+
+  function clearLineTokenRecoveryGuard() {
+
+    try {
+
+      sessionStorage.removeItem(
+        LINE_TOKEN_RECOVERY_GUARD_KEY
+      );
+
+
+    } catch (error) {
+
+      console.warn(
+        '[LINE Token Recovery] ไม่สามารถล้าง recovery guard ได้',
+        error
+      );
+
+    }
+
+  }
 
 
   // =====================================================
@@ -3549,7 +3654,8 @@
     // =================================================
 
     if (
-      isLoadingRecipe
+      isLoadingRecipe ||
+      isRecoveringLineToken
     ) {
 
       console.warn(
@@ -3689,6 +3795,69 @@
       updateDebugPanel();
 
 
+      if (
+        result &&
+        result.code ===
+          'LINE_TOKEN_EXPIRED'
+      ) {
+
+        isLoadingRecipe =
+          false;
+
+
+        if (
+          hasRecentLineTokenRecoveryAttempt()
+        ) {
+
+          isRecoveringLineToken =
+            false;
+
+
+          searchMessage.innerHTML =
+            'เซสชันหมดอายุ กรุณาปิดหน้านี้แล้วเปิดระบบใหม่จาก Rich Menu';
+
+
+          return;
+
+        }
+
+
+        if (
+          !markLineTokenRecoveryAttempted()
+        ) {
+
+          searchMessage.innerHTML =
+            'เซสชันหมดอายุ กรุณาปิดหน้านี้แล้วเปิดระบบใหม่จาก Rich Menu';
+
+
+          return;
+
+        }
+
+
+        isRecoveringLineToken =
+          true;
+
+
+        searchMessage.innerHTML =
+          'เซสชันหมดอายุ กำลังเชื่อมต่อใหม่...';
+
+
+        window.setTimeout(
+          function() {
+
+            window.location.reload();
+
+          },
+          300
+        );
+
+
+        return;
+
+      }
+
+
       // =================================================
       // STEP 7.3
       // getRecipe เป็นด่าน Authorization จริง
@@ -3701,6 +3870,8 @@
         result &&
         result.registered === false
       ) {
+
+        clearLineTokenRecoveryGuard();
 
         isLoadingRecipe =
           false;
@@ -3725,6 +3896,8 @@
         result &&
         result.blocked === true
       ) {
+
+        clearLineTokenRecoveryGuard();
 
         isLoadingRecipe =
           false;
@@ -3790,6 +3963,9 @@
         );
 
       }
+
+
+      clearLineTokenRecoveryGuard();
 
 
       const recipeRenderStartedAt =
