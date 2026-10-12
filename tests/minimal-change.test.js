@@ -118,15 +118,16 @@ function inputHarness(resultCount) {
   };
 }
 
-function openRecipeHarness(callApiImpl, sessionId = 'session-test') {
+function openRecipeHarness(callApiImpl, sessionId = 'session-test', recoveryAttempted = false) {
   const source = extractFunction(appScript, 'openRecipe').replace(/^function /, 'async function ');
-  const calls = { api: 0, logs: [], sequence: [] };
+  const calls = { api: 0, logs: [], sequence: [], reloads: 0 };
   const searchMessage = { innerHTML: '' };
   const factory = new Function(
-    'callApiImpl', 'calls', 'searchMessage', 'sessionId',
+    'callApiImpl', 'calls', 'searchMessage', 'sessionId', 'recoveryAttempted',
     `${source};
      let now=1000;
-     let isLoadingRecipe=false, searchStatusTimer=null, searchGeneration=0;
+     let isLoadingRecipe=false, isRecoveringLineToken=false, searchStatusTimer=null, searchGeneration=0;
+     let lineTokenRecoveryAttempted=recoveryAttempted;
      let searchStartTime=900, searchTaskTime=0, totalRetrievalTime=0, pageLoadTime=300;
      const currentIdToken='token';
      const DEBUG_MODE=false;
@@ -136,6 +137,9 @@ function openRecipeHarness(callApiImpl, sessionId = 'session-test') {
      function updateDebugPanel(){}
      function saveBackendDiagnostics(){}
      function showRegisterScreen(){}
+     function hasRecentLineTokenRecoveryAttempt(){return lineTokenRecoveryAttempted;}
+     function markLineTokenRecoveryAttempted(){lineTokenRecoveryAttempted=true; return true;}
+     function clearLineTokenRecoveryGuard(){lineTokenRecoveryAttempted=false;}
      function clearSuggestions(){}
      function resetSearchTiming(){searchStartTime=null; searchTaskTime=0; totalRetrievalTime=0;}
      function displayRecipe(){calls.sequence.push('display');}
@@ -143,11 +147,12 @@ function openRecipeHarness(callApiImpl, sessionId = 'session-test') {
      async function callApi(payload){calls.api+=1; return callApiImpl(payload);}
      async function sendRecipeLog(payload){calls.sequence.push('log'); calls.logs.push(payload); return true;}
      const performance={now:()=>{now+=10; return now;}};
+     const window={setTimeout:(callback)=>callback(),location:{reload:()=>{calls.reloads+=1;}}};
      const console={warn(){},log(){},error(){}};
      const document={getElementById:()=>searchMessage};
-     return {openRecipe, isLoading:()=>isLoadingRecipe, apiCount:()=>calls.api, logs:calls.logs, sequence:calls.sequence};`
+     return {openRecipe, isLoading:()=>isLoadingRecipe, apiCount:()=>calls.api, logs:calls.logs, sequence:calls.sequence, reloads:()=>calls.reloads, message:()=>searchMessage.innerHTML};`
   );
-  return factory(callApiImpl, calls, searchMessage, sessionId);
+  return factory(callApiImpl, calls, searchMessage, sessionId, recoveryAttempted);
 }
 
 function logHarness(initialHeaders) {
@@ -214,6 +219,26 @@ async function run() {
   assert.strictEqual(rapid.isLoading(), false);
   assert.strictEqual(rapid.apiCount(), 1, 'rapid double click must create one getRecipe request');
   assert.strictEqual(rapid.logs.length, 1, 'one recipe opening must create one log request');
+
+  const expired = openRecipeHarness(async () => ({
+    success: false,
+    code: 'LINE_TOKEN_EXPIRED',
+    message: 'เซสชัน LINE หมดอายุ กรุณาเชื่อมต่อใหม่'
+  }));
+  await expired.openRecipe('ลาเต้');
+  assert.strictEqual(expired.apiCount(), 1, 'expired token must not retry getRecipe');
+  assert.strictEqual(expired.reloads(), 1, 'first expired token must reload once');
+  assert.strictEqual(expired.logs.length, 0, 'expired token recovery must not write a recipe log');
+  assert.strictEqual(expired.isLoading(), false, 'expired token must release the loading lock');
+
+  const expiredAgain = openRecipeHarness(async () => ({
+    success: false,
+    code: 'LINE_TOKEN_EXPIRED',
+    message: 'เซสชัน LINE หมดอายุ กรุณาเชื่อมต่อใหม่'
+  }), 'session-test', true);
+  await expiredAgain.openRecipe('ลาเต้');
+  assert.strictEqual(expiredAgain.reloads(), 0, 'second expired token must not reload again');
+  assert.match(expiredAgain.message(), /Rich Menu/);
 
   const multi = openRecipeHarness(async (payload) => ({
     success: true,
