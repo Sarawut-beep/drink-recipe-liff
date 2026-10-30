@@ -206,6 +206,93 @@
       background: #f6f6f6;
     }
 
+    .recent-menus {
+      margin-top: 20px;
+      padding: 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      background: #fafafa;
+    }
+
+    .recent-menus-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .recent-menus-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .clear-recent-menus-button {
+      width: auto;
+      margin: 0;
+      padding: 4px;
+      border: 0;
+      background: transparent;
+      color: #666;
+      font-size: 13px;
+      font-weight: 400;
+      text-decoration: underline;
+    }
+
+    .clear-recent-menus-button:hover {
+      background: transparent;
+      color: #d94b1b;
+    }
+
+    .recent-menus-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .recent-menu-button {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 50px;
+      margin: 0;
+      padding: 11px 13px;
+      border: 1px solid #e5e7eb;
+      border-radius: 11px;
+      background: #fff;
+      color: #222;
+      text-align: left;
+    }
+
+    .recent-menu-button:hover {
+      border-color: #f15a24;
+      background: #fff8f5;
+    }
+
+    .recent-menu-label {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .recent-menu-icon {
+      margin-right: 8px;
+      color: #f15a24;
+    }
+
+    .recent-menu-arrow {
+      flex: 0 0 auto;
+      color: #999;
+      font-size: 20px;
+    }
+
+    .recent-menus-empty,
+    .recent-menus-hint {
+      margin: 12px 0 0;
+      color: #666;
+      font-size: 13px;
+    }
+
     .search-message {
       flex: 1 1 180px;
       margin: 0;
@@ -395,6 +482,53 @@
           >
             อัพเดตข้อมูลสูตร
           </button>
+
+        </div>
+
+
+        <div
+          id="recentMenusSection"
+          class="recent-menus hidden"
+        >
+
+          <div class="recent-menus-header">
+
+            <h2 class="recent-menus-title">
+              เมนูที่เปิดล่าสุด
+            </h2>
+
+
+            <button
+              class="clear-recent-menus-button"
+              type="button"
+              onclick="clearRecentMenus()"
+            >
+              ล้างรายการ
+            </button>
+
+          </div>
+
+
+          <div
+            id="recentMenusList"
+            class="recent-menus-list"
+          ></div>
+
+
+          <p
+            id="recentMenusEmpty"
+            class="recent-menus-empty hidden"
+          >
+            ยังไม่มีเมนูที่เปิดล่าสุด
+          </p>
+
+
+          <p
+            id="recentMenusHint"
+            class="recent-menus-hint hidden"
+          >
+            แตะเมนูเพื่อเปิดสูตรได้ทันที
+          </p>
 
         </div>
 
@@ -820,6 +954,380 @@
       ) +
       ' ชั่วโมง'
     );
+
+  }
+
+
+  // =====================================================
+  // เมนูที่เปิดล่าสุด
+  //
+  // เก็บเฉพาะชื่อเมนูสูงสุด 5 รายการใน localStorage
+  // ไม่เพิ่ม API request และไม่เก็บข้อมูลสูตร
+  // =====================================================
+
+  const RECENT_MENUS_STORAGE_KEY =
+    'drink_recipe_recent_menus_v1';
+
+  const RECENT_MENUS_LIMIT =
+    5;
+
+  let recentMenus =
+    [];
+
+
+  function normalizeRecentMenus(
+    menus
+  ) {
+
+    if (
+      !Array.isArray(
+        menus
+      )
+    ) {
+
+      return [];
+
+    }
+
+
+    const normalizedMenus =
+      [];
+
+    const usedNames =
+      {};
+
+
+    for (
+      let index = 0;
+      index < menus.length;
+      index++
+    ) {
+
+      const menuName =
+        String(
+          menus[index] || ''
+        ).trim();
+
+
+      const normalizedName =
+        normalizeText(
+          menuName
+        );
+
+
+      if (
+        !menuName ||
+        !normalizedName ||
+        usedNames[
+          normalizedName
+        ]
+      ) {
+
+        continue;
+
+      }
+
+
+      usedNames[
+        normalizedName
+      ] = true;
+
+
+      normalizedMenus.push(
+        menuName
+      );
+
+
+      if (
+        normalizedMenus.length >=
+          RECENT_MENUS_LIMIT
+      ) {
+
+        break;
+
+      }
+
+    }
+
+
+    return normalizedMenus;
+
+  }
+
+
+  function loadRecentMenus() {
+
+    try {
+
+      recentMenus =
+        normalizeRecentMenus(
+          JSON.parse(
+            localStorage.getItem(
+              RECENT_MENUS_STORAGE_KEY
+            ) ||
+            '[]'
+          )
+        );
+
+
+    } catch (
+      error
+    ) {
+
+      recentMenus =
+        [];
+
+
+      console.warn(
+        '[Recent Menus] read failed',
+        error
+      );
+
+    }
+
+  }
+
+
+  function saveRecentMenus() {
+
+    try {
+
+      localStorage.setItem(
+        RECENT_MENUS_STORAGE_KEY,
+        JSON.stringify(
+          recentMenus
+        )
+      );
+
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[Recent Menus] save failed',
+        error
+      );
+
+    }
+
+  }
+
+
+  function rememberRecentMenu(
+    menuName
+  ) {
+
+    const safeMenuName =
+      String(
+        menuName || ''
+      ).trim();
+
+
+    if (
+      !safeMenuName
+    ) {
+
+      return;
+
+    }
+
+
+    recentMenus =
+      normalizeRecentMenus(
+        [
+          safeMenuName
+        ].concat(
+          recentMenus
+        )
+      );
+
+
+    saveRecentMenus();
+
+    renderRecentMenus();
+
+  }
+
+
+  function clearRecentMenus() {
+
+    recentMenus =
+      [];
+
+
+    try {
+
+      localStorage.removeItem(
+        RECENT_MENUS_STORAGE_KEY
+      );
+
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[Recent Menus] clear failed',
+        error
+      );
+
+    }
+
+
+    renderRecentMenus();
+
+  }
+
+
+  function renderRecentMenus() {
+
+    const recentMenusList =
+      document.getElementById(
+        'recentMenusList'
+      );
+
+
+    const emptyMessage =
+      document.getElementById(
+        'recentMenusEmpty'
+      );
+
+
+    const hintMessage =
+      document.getElementById(
+        'recentMenusHint'
+      );
+
+
+    recentMenusList.innerHTML =
+      '';
+
+
+    emptyMessage.classList.toggle(
+      'hidden',
+      recentMenus.length > 0
+    );
+
+
+    hintMessage.classList.toggle(
+      'hidden',
+      recentMenus.length === 0
+    );
+
+
+    recentMenus.forEach(
+      function(
+        menuName
+      ) {
+
+        const button =
+          document.createElement(
+            'button'
+          );
+
+
+        const label =
+          document.createElement(
+            'span'
+          );
+
+
+        const icon =
+          document.createElement(
+            'span'
+          );
+
+
+        const arrow =
+          document.createElement(
+            'span'
+          );
+
+
+        button.type =
+          'button';
+
+
+        button.className =
+          'recent-menu-button';
+
+
+        label.className =
+          'recent-menu-label';
+
+
+        icon.className =
+          'recent-menu-icon';
+
+
+        icon.textContent =
+          '◷';
+
+
+        arrow.className =
+          'recent-menu-arrow';
+
+
+        arrow.textContent =
+          '›';
+
+
+        label.appendChild(
+          icon
+        );
+
+
+        label.appendChild(
+          document.createTextNode(
+            menuName
+          )
+        );
+
+
+        button.appendChild(
+          label
+        );
+
+
+        button.appendChild(
+          arrow
+        );
+
+
+        button.onclick =
+          function() {
+
+            openRecipe(
+              menuName
+            );
+
+          };
+
+
+        recentMenusList.appendChild(
+          button
+        );
+
+      }
+    );
+
+  }
+
+
+  function setRecentMenusVisible(
+    shouldShow
+  ) {
+
+    document
+      .getElementById(
+        'recentMenusSection'
+      )
+      .classList
+      .toggle(
+        'hidden',
+        !shouldShow
+      );
 
   }
 
@@ -2474,6 +2982,21 @@
         );
 
 
+    loadRecentMenus();
+
+    renderRecentMenus();
+
+    setRecentMenusVisible(
+      document
+        .getElementById(
+          'searchInput'
+        )
+        .value
+        .trim()
+        .length === 0
+    );
+
+
     // =================================================
     // Menu Cache 48 ชั่วโมงยังเก็บไว้
     //
@@ -3216,6 +3739,24 @@
             },
             300
           );
+
+      }
+    );
+
+
+  document
+    .getElementById(
+      'searchInput'
+    )
+    .addEventListener(
+      'input',
+      function() {
+
+        setRecentMenusVisible(
+          this.value
+            .trim()
+            .length === 0
+        );
 
       }
     );
@@ -4414,6 +4955,16 @@
       '';
 
 
+    rememberRecentMenu(
+      recipe.menuName || ''
+    );
+
+
+    setRecentMenusVisible(
+      false
+    );
+
+
     recipeSection.scrollIntoView({
       behavior:
         'smooth'
@@ -4448,6 +4999,13 @@
 
 
     clearSuggestions();
+
+
+    renderRecentMenus();
+
+    setRecentMenusVisible(
+      true
+    );
 
 
     resetSearchTiming();
