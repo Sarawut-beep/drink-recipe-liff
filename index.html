@@ -300,6 +300,26 @@
       font-size: 14px;
     }
 
+    .search-hint {
+      min-height: 20px;
+      margin: 8px 3px 0;
+      color: #666;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .search-hint.is-success {
+      color: #377a4a;
+    }
+
+    .search-hint.is-error {
+      color: #c2410c;
+    }
+
+    .search-hint strong {
+      font-weight: 800;
+    }
+
     .recipe-card {
       margin-top: 20px;
     }
@@ -463,6 +483,13 @@
             >
 
           </div>
+
+
+          <p
+            id="searchHint"
+            class="search-hint"
+            aria-live="polite"
+          >พิมพ์ชื่อเมนู เช่น ลาเต้ มัทฉะ หรือชาไทย</p>
 
         </div>
 
@@ -4069,16 +4096,31 @@
       );
 
 
+    const searchHint =
+      document.getElementById(
+        'searchHint'
+      );
+
+
     suggestionList.innerHTML =
       '';
+
+
+    searchHint.className =
+      'search-hint';
 
 
     if (
       results.length === 0
     ) {
 
-      suggestionList.innerHTML =
-        '<p>ไม่พบเมนูที่ใกล้เคียง</p>';
+      searchHint.className =
+        'search-hint is-error';
+
+
+      searchHint.innerHTML =
+        '<strong>ไม่พบเมนูที่ตรงกัน</strong><br>' +
+        'ลองตรวจสอบคำสะกดหรือใช้คำค้นอื่น';
 
       return;
 
@@ -4120,6 +4162,16 @@
 
       }
     );
+
+
+    searchHint.className =
+      'search-hint is-success';
+
+
+    searchHint.textContent =
+      'พบ ' +
+      results.length +
+      ' เมนูใกล้เคียง — เลือกเมนูด้านล่างได้เลย';
 
   }
 
@@ -4947,12 +4999,7 @@
       );
 
 
-    document
-      .getElementById(
-        'suggestionList'
-      )
-      .innerHTML =
-      '';
+    clearSuggestions();
 
 
     rememberRecentMenu(
@@ -5033,6 +5080,20 @@
       )
       .innerHTML =
       '';
+
+
+    const searchHint =
+      document.getElementById(
+        'searchHint'
+      );
+
+
+    searchHint.className =
+      'search-hint';
+
+
+    searchHint.textContent =
+      'พิมพ์ชื่อเมนู เช่น ลาเต้ มัทฉะ หรือชาไทย';
 
   }
 
