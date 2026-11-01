@@ -1039,11 +1039,18 @@
   // เมนูที่เปิดล่าสุด
   //
   // เก็บเฉพาะชื่อเมนูสูงสุด 5 รายการใน localStorage
+  // และคุกกี้สำรองสำหรับ LIFF WebView บนเครื่องเดิม
   // ไม่เพิ่ม API request และไม่เก็บข้อมูลสูตร
   // =====================================================
 
   const RECENT_MENUS_STORAGE_KEY =
     'drink_recipe_recent_menus_v1';
+
+  const RECENT_MENUS_COOKIE_KEY =
+    'drink_recipe_recent_menus_backup_v1';
+
+  const RECENT_MENUS_COOKIE_MAX_AGE =
+    365 * 24 * 60 * 60;
 
   const RECENT_MENUS_LIMIT =
     5;
@@ -1134,16 +1141,17 @@
 
   function loadRecentMenus() {
 
+    let storedMenus =
+      [];
+
     try {
 
-      recentMenus =
-        normalizeRecentMenus(
-          JSON.parse(
-            localStorage.getItem(
-              RECENT_MENUS_STORAGE_KEY
-            ) ||
-            '[]'
-          )
+      storedMenus =
+        JSON.parse(
+          localStorage.getItem(
+            RECENT_MENUS_STORAGE_KEY
+          ) ||
+          '[]'
         );
 
 
@@ -1151,12 +1159,185 @@
       error
     ) {
 
-      recentMenus =
-        [];
-
-
       console.warn(
         '[Recent Menus] read failed',
+        error
+      );
+
+    }
+
+
+    if (
+      !Array.isArray(
+        storedMenus
+      ) ||
+      storedMenus.length === 0
+    ) {
+
+      storedMenus =
+        readRecentMenusCookie();
+
+    }
+
+
+    recentMenus =
+      normalizeRecentMenus(
+        storedMenus
+      );
+
+
+    if (
+      recentMenus.length > 0
+    ) {
+
+      try {
+
+        localStorage.setItem(
+          RECENT_MENUS_STORAGE_KEY,
+          JSON.stringify(
+            recentMenus
+          )
+        );
+
+      } catch (
+        error
+      ) {
+
+        console.warn(
+          '[Recent Menus] restore failed',
+          error
+        );
+
+      }
+
+    }
+
+  }
+
+
+  function readRecentMenusCookie() {
+
+    try {
+
+      const cookiePrefix =
+        encodeURIComponent(
+          RECENT_MENUS_COOKIE_KEY
+        ) +
+        '=';
+
+
+      const cookieParts =
+        String(
+          document.cookie || ''
+        ).split(
+          ';'
+        );
+
+
+      for (
+        let index = 0;
+        index < cookieParts.length;
+        index++
+      ) {
+
+        const cookiePart =
+          cookieParts[index].trim();
+
+
+        if (
+          cookiePart.indexOf(
+            cookiePrefix
+          ) !== 0
+        ) {
+
+          continue;
+
+        }
+
+
+        return JSON.parse(
+          decodeURIComponent(
+            cookiePart.slice(
+              cookiePrefix.length
+            )
+          )
+        );
+
+      }
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[Recent Menus] cookie read failed',
+        error
+      );
+
+    }
+
+
+    return [];
+
+  }
+
+
+  function saveRecentMenusCookie() {
+
+    try {
+
+      document.cookie =
+        encodeURIComponent(
+          RECENT_MENUS_COOKIE_KEY
+        ) +
+        '=' +
+        encodeURIComponent(
+          JSON.stringify(
+            recentMenus
+          )
+        ) +
+        '; Max-Age=' +
+        String(
+          RECENT_MENUS_COOKIE_MAX_AGE
+        ) +
+        '; Path=/drink-recipe-liff/' +
+        '; Secure' +
+        '; SameSite=Lax';
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[Recent Menus] cookie save failed',
+        error
+      );
+
+    }
+
+  }
+
+
+  function clearRecentMenusCookie() {
+
+    try {
+
+      document.cookie =
+        encodeURIComponent(
+          RECENT_MENUS_COOKIE_KEY
+        ) +
+        '=;' +
+        ' Max-Age=0;' +
+        ' Path=/drink-recipe-liff/;' +
+        ' Secure;' +
+        ' SameSite=Lax';
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[Recent Menus] cookie clear failed',
         error
       );
 
@@ -1187,6 +1368,9 @@
       );
 
     }
+
+
+    saveRecentMenusCookie();
 
   }
 
@@ -1250,6 +1434,9 @@
       );
 
     }
+
+
+    clearRecentMenusCookie();
 
 
     renderRecentMenus();
