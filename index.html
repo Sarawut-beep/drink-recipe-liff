@@ -330,6 +330,38 @@
       margin-bottom: 18px;
     }
 
+    .coffee-shot-warning {
+      display: flex;
+      gap: 11px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+      padding: 14px 15px;
+      border: 1.5px solid #fb923c;
+      border-radius: 12px;
+      background: #fff7ed;
+      color: #7c2d12;
+      line-height: 1.6;
+    }
+
+    .coffee-shot-warning.hidden {
+      display: none;
+    }
+
+    .coffee-shot-warning-icon {
+      flex: 0 0 auto;
+      font-size: 21px;
+      line-height: 1.4;
+    }
+
+    .coffee-shot-warning-title {
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+
+    .coffee-shot-warning-text {
+      font-size: 14px;
+    }
+
     .step-item {
       background: #f7f7f7;
       border-radius: 10px;
@@ -577,6 +609,24 @@
             id="recipeTitle"
             class="recipe-title"
           ></div>
+
+
+          <div
+            id="coffeeShotWarning"
+            class="coffee-shot-warning hidden"
+            role="note"
+            aria-label="มาตรฐานช็อตกาแฟ"
+          >
+            <div class="coffee-shot-warning-icon">☕</div>
+            <div>
+              <div class="coffee-shot-warning-title">
+                มาตรฐานช็อตกาแฟ
+              </div>
+              <div class="coffee-shot-warning-text">
+                เตรียมแก้วและส่วนผสมอื่นให้พร้อมก่อนกดช็อต หลังสกัดแล้วต้องนำไปใช้ภายใน <strong>10 วินาที</strong> เพื่อป้องกันรสชาติเปลี่ยน
+              </div>
+            </div>
+          </div>
 
 
           <div
@@ -4904,6 +4954,59 @@
   // แสดงสูตร
   // =====================================================
 
+  function shouldShowCoffeeShotWarning(
+    recipe
+  ) {
+
+    if (
+      !recipe ||
+      !Array.isArray(
+        recipe.steps
+      )
+    ) {
+
+      return false;
+
+    }
+
+
+    const shotPattern =
+      /\b(?:single|double)\s*shots?\b/i;
+
+
+    const coffeePattern =
+      /(?:น้ำ\s*กาแฟ|กาแฟ|coffee|espresso)/i;
+
+
+    return recipe.steps.some(
+      function(
+        step
+      ) {
+
+        const stepText =
+          String(
+            step &&
+            step.text
+              ? step.text
+              : ''
+          );
+
+
+        return (
+          shotPattern.test(
+            stepText
+          ) &&
+          coffeePattern.test(
+            stepText
+          )
+        );
+
+      }
+    );
+
+  }
+
+
   function displayRecipe(
     recipe
   ) {
@@ -4926,8 +5029,24 @@
       );
 
 
+    const coffeeShotWarning =
+      document.getElementById(
+        'coffeeShotWarning'
+      );
+
+
     recipeTitle.textContent =
       recipe.menuName || '';
+
+
+    coffeeShotWarning
+      .classList
+      .toggle(
+        'hidden',
+        !shouldShowCoffeeShotWarning(
+          recipe
+        )
+      );
 
 
     recipeSteps.innerHTML =
