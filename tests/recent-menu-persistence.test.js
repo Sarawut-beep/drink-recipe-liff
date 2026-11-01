@@ -11,10 +11,6 @@ function extractFunction(source, name) {
   const marker = `function ${name}(`;
   const start = source.indexOf(marker);
   assert(start >= 0, `missing ${name}`);
-  const declarationStart =
-    source.slice(start - 6, start) === 'async '
-      ? start - 6
-      : start;
   const bodyStart = source.indexOf('{', start);
   let depth = 0;
   let quote = null;
@@ -35,65 +31,40 @@ function extractFunction(source, name) {
     if (char === '{') depth += 1;
     if (char === '}') {
       depth -= 1;
-      if (depth === 0) return source.slice(declarationStart, index + 1);
+      if (depth === 0) return source.slice(start, index + 1);
     }
   }
 
   throw new Error(`unterminated ${name}`);
 }
 
-assert(!html.includes('drink_recipe_recent_menus_backup_v1'));
-assert(!html.includes('document.cookie'));
-assert(/action:\s*'getRecentMenus'/.test(html));
-assert(/action:\s*'clearRecentMenus'/.test(html));
-assert(html.includes('scheduleRecentMenusRestore();'));
+const readCookieSource = extractFunction(html, 'readRecentMenusCookie');
+const saveCookieSource = extractFunction(html, 'saveRecentMenusCookie');
+const clearCookieSource = extractFunction(html, 'clearRecentMenusCookie');
+const document = { cookie: '' };
+const consoleStub = { warn() {} };
+const recentMenus = ['ลาเต้ร้อน (8oz.)', 'ชาไทยเย็น'];
 
-const restoreSource = extractFunction(
-  html,
-  'restoreRecentMenusFromServer'
-);
+const helpers = new Function(
+  'document',
+  'console',
+  'recentMenus',
+  `const RECENT_MENUS_COOKIE_KEY='drink_recipe_recent_menus_backup_v1';
+   const RECENT_MENUS_COOKIE_MAX_AGE=365*24*60*60;
+   ${readCookieSource}
+   ${saveCookieSource}
+   ${clearCookieSource}
+   return {readRecentMenusCookie, saveRecentMenusCookie, clearRecentMenusCookie};`
+)(document, consoleStub, recentMenus);
 
-const harness = new Function(
-  'assert',
-  `${restoreSource}
-   let recentMenus = [];
-   let recentMenusBackgroundTimer = null;
-   let recentMenusRequestCompleted = false;
-   let recentMenusRequestRunning = false;
-   const currentIdToken = 'verified-token';
-   const BACKGROUND_RECHECK_DELAY_MS = 3000;
-   let saved = 0;
-   let rendered = 0;
-   function canStartBackgroundRequest(){ return true; }
-   function scheduleRecentMenusRestore(){ throw new Error('unexpected reschedule'); }
-   function normalizeRecentMenus(menus){ return [...new Set(menus)].slice(0, 5); }
-   function saveRecentMenus(){ saved += 1; }
-   function renderRecentMenus(){ rendered += 1; }
-   async function callApi(payload){
-     assert.strictEqual(payload.action, 'getRecentMenus');
-     assert.strictEqual(payload.idToken, currentIdToken);
-     recentMenus = ['เมนูที่เพิ่งเปิด'];
-     return {success: true, menus: ['เมนูจากเซิร์ฟเวอร์', 'เมนูที่เพิ่งเปิด']};
-   }
-   return {
-     run: restoreRecentMenusFromServer,
-     state: () => ({recentMenus, saved, rendered, recentMenusRequestCompleted})
-   };`
-)(assert);
+helpers.saveRecentMenusCookie();
+assert.match(document.cookie, /Max-Age=31536000/);
+assert.match(document.cookie, /Path=\/drink-recipe-liff\//);
 
-(async () => {
-  await harness.run();
-  assert.deepStrictEqual(
-    harness.state(),
-    {
-      recentMenus: ['เมนูที่เพิ่งเปิด', 'เมนูจากเซิร์ฟเวอร์'],
-      saved: 1,
-      rendered: 1,
-      recentMenusRequestCompleted: true
-    }
-  );
-  console.log('recent-menu persistence tests: PASS');
-})().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+document.cookie = document.cookie.split(';')[0];
+assert.deepStrictEqual(helpers.readRecentMenusCookie(), recentMenus);
+
+helpers.clearRecentMenusCookie();
+assert.match(document.cookie, /Max-Age=0/);
+
+console.log('recent-menu persistence tests: PASS');
