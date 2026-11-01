@@ -1039,24 +1039,30 @@
   // เมนูที่เปิดล่าสุด
   //
   // เก็บเฉพาะชื่อเมนูสูงสุด 5 รายการใน localStorage
-  // และคุกกี้สำรองสำหรับ LIFF WebView บนเครื่องเดิม
-  // ไม่เพิ่ม API request และไม่เก็บข้อมูลสูตร
+  // ถ้า LIFF ล้าง localStorage จะกู้จาก Apps Script แบบเบื้องหลัง
+  // ไม่เก็บข้อมูลสูตร และไม่ขัดขวางการค้นหา/เปิดสูตร
   // =====================================================
 
   const RECENT_MENUS_STORAGE_KEY =
     'drink_recipe_recent_menus_v1';
 
-  const RECENT_MENUS_COOKIE_KEY =
-    'drink_recipe_recent_menus_backup_v1';
-
-  const RECENT_MENUS_COOKIE_MAX_AGE =
-    365 * 24 * 60 * 60;
-
   const RECENT_MENUS_LIMIT =
     5;
 
+  const RECENT_MENUS_BACKGROUND_DELAY_MS =
+    2000;
+
   let recentMenus =
     [];
+
+  let recentMenusBackgroundTimer =
+    null;
+
+  let recentMenusRequestRunning =
+    false;
+
+  let recentMenusRequestCompleted =
+    false;
 
 
   function normalizeRecentMenus(
@@ -1167,19 +1173,6 @@
     }
 
 
-    if (
-      !Array.isArray(
-        storedMenus
-      ) ||
-      storedMenus.length === 0
-    ) {
-
-      storedMenus =
-        readRecentMenusCookie();
-
-    }
-
-
     recentMenus =
       normalizeRecentMenus(
         storedMenus
@@ -1215,137 +1208,6 @@
   }
 
 
-  function readRecentMenusCookie() {
-
-    try {
-
-      const cookiePrefix =
-        encodeURIComponent(
-          RECENT_MENUS_COOKIE_KEY
-        ) +
-        '=';
-
-
-      const cookieParts =
-        String(
-          document.cookie || ''
-        ).split(
-          ';'
-        );
-
-
-      for (
-        let index = 0;
-        index < cookieParts.length;
-        index++
-      ) {
-
-        const cookiePart =
-          cookieParts[index].trim();
-
-
-        if (
-          cookiePart.indexOf(
-            cookiePrefix
-          ) !== 0
-        ) {
-
-          continue;
-
-        }
-
-
-        return JSON.parse(
-          decodeURIComponent(
-            cookiePart.slice(
-              cookiePrefix.length
-            )
-          )
-        );
-
-      }
-
-    } catch (
-      error
-    ) {
-
-      console.warn(
-        '[Recent Menus] cookie read failed',
-        error
-      );
-
-    }
-
-
-    return [];
-
-  }
-
-
-  function saveRecentMenusCookie() {
-
-    try {
-
-      document.cookie =
-        encodeURIComponent(
-          RECENT_MENUS_COOKIE_KEY
-        ) +
-        '=' +
-        encodeURIComponent(
-          JSON.stringify(
-            recentMenus
-          )
-        ) +
-        '; Max-Age=' +
-        String(
-          RECENT_MENUS_COOKIE_MAX_AGE
-        ) +
-        '; Path=/drink-recipe-liff/' +
-        '; Secure' +
-        '; SameSite=Lax';
-
-    } catch (
-      error
-    ) {
-
-      console.warn(
-        '[Recent Menus] cookie save failed',
-        error
-      );
-
-    }
-
-  }
-
-
-  function clearRecentMenusCookie() {
-
-    try {
-
-      document.cookie =
-        encodeURIComponent(
-          RECENT_MENUS_COOKIE_KEY
-        ) +
-        '=;' +
-        ' Max-Age=0;' +
-        ' Path=/drink-recipe-liff/;' +
-        ' Secure;' +
-        ' SameSite=Lax';
-
-    } catch (
-      error
-    ) {
-
-      console.warn(
-        '[Recent Menus] cookie clear failed',
-        error
-      );
-
-    }
-
-  }
-
-
   function saveRecentMenus() {
 
     try {
@@ -1369,8 +1231,145 @@
 
     }
 
+  }
 
-    saveRecentMenusCookie();
+
+  function scheduleRecentMenusRestore(
+    delayMs =
+      RECENT_MENUS_BACKGROUND_DELAY_MS
+  ) {
+
+    if (
+      recentMenus.length > 0 ||
+      recentMenusRequestCompleted ||
+      recentMenusRequestRunning ||
+      !currentIdToken
+    ) {
+
+      return;
+
+    }
+
+
+    if (
+      recentMenusBackgroundTimer
+    ) {
+
+      clearTimeout(
+        recentMenusBackgroundTimer
+      );
+
+    }
+
+
+    recentMenusBackgroundTimer =
+      setTimeout(
+        restoreRecentMenusFromServer,
+        delayMs
+      );
+
+  }
+
+
+  async function restoreRecentMenusFromServer() {
+
+    recentMenusBackgroundTimer =
+      null;
+
+
+    if (
+      recentMenus.length > 0 ||
+      recentMenusRequestCompleted ||
+      recentMenusRequestRunning ||
+      !currentIdToken
+    ) {
+
+      return;
+
+    }
+
+
+    if (
+      !canStartBackgroundRequest()
+    ) {
+
+      scheduleRecentMenusRestore(
+        BACKGROUND_RECHECK_DELAY_MS
+      );
+
+      return;
+
+    }
+
+
+    recentMenusRequestRunning =
+      true;
+
+    recentMenusRequestCompleted =
+      true;
+
+
+    try {
+
+      const result =
+        await callApi({
+
+          source:
+            'LIFF',
+
+          action:
+            'getRecentMenus',
+
+          idToken:
+            currentIdToken
+
+        });
+
+
+      if (
+        !result ||
+        !result.success ||
+        !Array.isArray(
+          result.menus
+        )
+      ) {
+
+        return;
+
+      }
+
+
+      // เมนูที่เพิ่งเปิดบนเครื่องนี้ต้องอยู่ก่อนข้อมูลจาก Server
+      recentMenus =
+        normalizeRecentMenus(
+          recentMenus.concat(
+            result.menus
+          )
+        );
+
+
+      saveRecentMenus();
+
+      renderRecentMenus();
+
+
+    } catch (
+      error
+    ) {
+
+      // เป็นฟีเจอร์เสริม: โหลดไม่สำเร็จต้องไม่กระทบการค้นหา
+      console.warn(
+        '[Recent Menus] background restore failed',
+        error.message
+      );
+
+
+    } finally {
+
+      recentMenusRequestRunning =
+        false;
+
+    }
 
   }
 
@@ -1411,10 +1410,13 @@
   }
 
 
-  function clearRecentMenus() {
+  async function clearRecentMenus() {
 
     recentMenus =
       [];
+
+    recentMenusRequestCompleted =
+      true;
 
 
     try {
@@ -1435,11 +1437,43 @@
 
     }
 
-
-    clearRecentMenusCookie();
-
-
     renderRecentMenus();
+
+
+    if (!currentIdToken) {
+
+      return;
+
+    }
+
+
+    try {
+
+      await callApi({
+
+        source:
+          'LIFF',
+
+        action:
+          'clearRecentMenus',
+
+        idToken:
+          currentIdToken
+
+      });
+
+
+    } catch (
+      error
+    ) {
+
+      // ล้างในเครื่องสำเร็จแล้ว จึงไม่รบกวนผู้ใช้หาก Server ล้ม
+      console.warn(
+        '[Recent Menus] server clear failed',
+        error.message
+      );
+
+    }
 
   }
 
@@ -3259,6 +3293,15 @@
         .trim()
         .length === 0
     );
+
+
+    if (
+      recentMenus.length === 0
+    ) {
+
+      scheduleRecentMenusRestore();
+
+    }
 
 
     // =================================================
